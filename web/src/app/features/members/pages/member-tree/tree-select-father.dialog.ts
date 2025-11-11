@@ -11,7 +11,7 @@ import type { Member } from '../../models/member.model';
   template: `
     <h2 mat-dialog-title>Chọn người cha</h2>
     <div mat-dialog-content>
-      <p>Mẹ: <strong>{{data.mother?.fullName}}</strong></p>
+  <p>Mẹ: <strong>{{data.mother.fullName}}</strong></p>
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
         <button mat-stroked-button color="primary" *ngFor="let f of data.fathers" (click)="pick(f)">
           {{f.fullName}}

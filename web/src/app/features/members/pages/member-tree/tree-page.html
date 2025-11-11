@@ -1,0 +1,82 @@
+<div class="tree-shell">
+  <div class="left">
+    <div class="header">
+      <mat-form-field appearance="outline" style="min-width: 220px;">
+        <mat-label>Dòng họ</mat-label>
+        <mat-select [(value)]="selectedFamilyId" (selectionChange)="onFamilyChange()">
+          <mat-option *ngFor="let f of families" [value]="f.id">{{f.name}}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-stroked-button color="primary" (click)="createRoot()">Tạo đời đầu</button>
+      <div class="stats-inline">
+        <div class="stat-item"><span>Tổng:</span><strong>{{stats.totalMembers}}</strong></div>
+        <div class="stat-item"><span>Đời:</span><strong>{{stats.totalGenerations}}</strong></div>
+        <div class="stat-item"><span>Nam:</span><strong>{{stats.totalMale}}</strong></div>
+        <div class="stat-item"><span>Nữ:</span><strong>{{stats.totalFemale}}</strong></div>
+        <div class="stat-item"><span>Còn sống:</span><strong>{{stats.totalAlive}}</strong></div>
+        <div class="stat-item"><span>Đã mất:</span><strong>{{stats.totalDeceased}}</strong></div>
+      </div>
+      <span class="spacer"></span>
+      <mat-form-field appearance="outline" style="width:120px;">
+        <mat-label>Kích cỡ</mat-label>
+        <input matInput type="number" min="0.6" step="0.1" [(ngModel)]="boxScale" (input)="onScaleChange()" />
+      </mat-form-field>
+      <button mat-stroked-button (click)="computeConnections()">Vẽ đường nối</button>
+      <button mat-stroked-button (click)="centerRoot()">Canh giữa</button>
+      <button mat-button (click)="reload()"><mat-icon>refresh</mat-icon> Tải lại</button>
+    </div>
+    <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()">
+      <div class="canvas" #canvasRef [style.transform]="'scale(' + zoom + ')'" [style.fontSize.px]="12*boxScale" style="transform-origin: 0 0; position: relative; display:inline-block;">
+        <svg class="connections" *ngIf="connections.length" [attr.width]="overlayW" [attr.height]="overlayH">
+          <line *ngFor="let c of connections" [attr.x1]="c.x1" [attr.y1]="c.y1" [attr.x2]="c.x2" [attr.y2]="c.y2" [attr.stroke]="c.color" stroke-width="2" />
+        </svg>
+        <ng-container *ngIf="root; else empty">
+          <div class="tree-content">
+            <div class="couple-box" [ngStyle]="{'border-color': genderColor(root.gender)}">
+              <div #husbandEl class="person male" (contextmenu)="openContextMenu($event, root)">
+                <div class="name">{{root.fullName}}</div>
+                <div class="meta">{{root.dob | date:'yyyy-MM-dd'}}</div>
+              </div>
+              <div class="wives-list">
+                <div class="person female" *ngFor="let s of spouses; let i = index" #wifeEl [attr.data-id]="s.id" (contextmenu)="openContextMenu($event, s)">
+                  <div class="name">{{s.fullName}} <span class="role-tag">(vợ)</span></div>
+                  <div class="meta">{{s.dob | date:'yyyy-MM-dd'}}</div>
+                  <div class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Thêm con" (click)="quickAddChild(s)"></div>
+                </div>
+              </div>
+            </div>
+            <div class="children" *ngFor="let level of levels; let li = index">
+              <div class="child-couple couple-box" *ngFor="let c of level" #childBox [ngStyle]="{'border-color': genderColor(c.gender)}">
+                <div class="person child-person" [class.male]="c.gender==='male'" [class.female]="c.gender==='female'" #childEl [attr.data-id]="c.id" [attr.data-mother]="c.mother" [attr.data-father]="c.father" (contextmenu)="openContextMenu($event, c)">
+                  <div class="name">{{c.fullName}}</div>
+                  <div class="meta">{{c.dob | date:'yyyy-MM-dd'}}</div>
+                </div>
+                <div class="wives-list" *ngIf="spousesByMember[c.id!] && spousesByMember[c.id!].length">
+                  <div class="person spouse-small" *ngFor="let s of spousesByMember[c.id!]" #wifeEl [attr.data-id]="s.id" (contextmenu)="openContextMenu($event, s)" (click)="onSpousePersonClick(c, s, $event)" [class.male]="s.gender==='male'" [class.female]="s.gender==='female'">
+                    <div class="name">{{s.fullName}} <span class="role-tag">{{s.gender==='female'?'(vợ)':'(chồng)'}} </span></div>
+                    <div class="meta">{{s.dob | date:'yyyy-MM-dd'}}</div>
+                    <div class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Thêm con" (click)="onAnchorClick(c, s); $event.stopPropagation()"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+      <ng-template #empty>
+        <div class="empty">Chưa có đời đầu. Bấm "Tạo đời đầu" để bắt đầu.</div>
+      </ng-template>
+    </div>
+  </div>
+  <div class="right">
+    <!-- Chỗ trống cho về sau: legend, bộ lọc, etc. -->
+  </div>
+</div>
+
+<!-- Context menu primitive -->
+<div class="ctx-menu" *ngIf="ctx.visible" [style.left.px]="ctx.x" [style.top.px]="ctx.y" (click)="ctx.visible = false">
+  <button mat-button (click)="editInfo(ctx.node)">Sửa thông tin</button>
+  <button mat-button (click)="addWife(ctx.node)">Thêm hôn phối</button>
+  <button mat-button (click)="addChild(ctx.node)" *ngIf="ctx.node?.gender==='female'">Thêm con</button>
+  <button mat-button color="warn" (click)="deleteNode(ctx.node)">Xóa</button>
+</div>

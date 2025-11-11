@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal, AfterViewInit, ElementRef, ViewChild, ViewChildren, QueryList, HostListener } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -34,6 +35,7 @@ import type { Member } from '../../models/member.model';
     MatDialogModule,
     FormsModule,
     MatInputModule,
+    TreeSelectFatherDialog,
   ],
   template: `
     <div class="tree-shell">
@@ -343,9 +345,16 @@ export class TreePage implements OnInit, AfterViewInit {
     if (owner.gender === 'female' && spouse.gender === 'male'){
       const baseName = prompt('Tên con?');
       if (!baseName) return;
+      // Nếu người mẹ có nhiều chồng, mở hộp thoại chọn cha (mặc định là spouse vừa bấm)
+      let pickedFather: Member | null = spouse;
+      const males = (this.spousesByMember[owner.id!]||[]).filter(p=> p.gender==='male');
+      if (males.length > 1){
+        const ref = this.dialog.open(TreeSelectFatherDialog, { data: { mother: owner, fathers: males }, width: '420px' });
+        const choice = await firstValueFrom(ref.afterClosed());
+        if (choice) pickedFather = choice; else return; // hủy => thoát
+      }
       const payload: any = { fullName: baseName, family: this.selectedFamilyId!, mother: owner.id };
-      // father chính là spouse nam
-      payload.father = spouse.id;
+      payload.father = pickedFather?.id;
       await this.ensureUnionIfNeeded(payload.mother, payload.father);
       this.membersApi.create(payload).subscribe({
         next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
@@ -471,11 +480,9 @@ export class TreePage implements OnInit, AfterViewInit {
     if (males.length === 1) return males[0];
     if (males.length > 1){
       // Mở dialog chọn cha
-      try {
-        const ref = this.dialog.open(TreeSelectFatherDialog, { data: { mother, fathers: males }, width: '420px' });
-        const picked = await ref.afterClosed().toPromise();
-        if (picked) return picked;
-      } catch { /* ignore */ }
+      const ref = this.dialog.open(TreeSelectFatherDialog, { data: { mother, fathers: males }, width: '420px' });
+      const picked = await firstValueFrom(ref.afterClosed());
+      if (picked) return picked;
       return null; // hủy chọn => không gán cha
     }
     // fallback: nếu mẹ là vợ của root nam thì dùng root làm cha
