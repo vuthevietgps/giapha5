@@ -12,6 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TreeEditMemberDialog } from './tree-edit-member.dialog';
 import { TreeAddPartnerDialog } from './tree-add-partner.dialog';
+import { TreeSelectFatherDialog } from './tree-select-father.dialog';
 import { FamilyService } from '../../../families/services/family';
 import { MemberService } from '../../services/member';
 import { UnionService } from '../../services/union';
@@ -51,9 +52,10 @@ import type { Member } from '../../models/member.model';
             <input matInput type="number" min="0.6" step="0.1" [(ngModel)]="boxScale" (input)="onScaleChange()" />
           </mat-form-field>
           <button mat-stroked-button (click)="computeConnections()">Vẽ đường nối</button>
+          <button mat-stroked-button (click)="centerRoot()">Canh giữa</button>
           <button mat-button (click)="reload()"><mat-icon>refresh</mat-icon> Tải lại</button>
         </div>
-            <div #treeAreaRef class="tree-area" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)">
+            <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()">
               <div class="canvas" #canvasRef [style.transform]="'scale(' + zoom + ')'" [style.fontSize.px]="12*boxScale" style="transform-origin: 0 0; position: relative; display:inline-block;">
             <svg class="connections" *ngIf="connections.length"
                  [attr.width]="overlayW"
@@ -118,6 +120,8 @@ import type { Member } from '../../models/member.model';
   .header{display:flex;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #e0e0e0}
     .spacer{flex:1}
   .tree-area{position:relative;flex:1;overflow:auto;padding:8px}
+  .tree-area.space-pan{cursor:grab}
+  .tree-area.space-pan.panning{cursor:grabbing}
   .tree-content{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:100%}
   .connections{position:absolute;left:0;top:0;pointer-events:none;z-index:999}
     .node{border:1px solid #ccc;border-radius:8px;padding:8px 12px;background:#fff;min-width:160px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
@@ -132,7 +136,8 @@ import type { Member } from '../../models/member.model';
   .wives-list{display:flex;gap:6px;flex-wrap:nowrap;justify-content:center;align-items:flex-end}
     .wives-list .person{position:relative;padding-bottom:18px}
   .wives-list .person .anchor{position:absolute;left:50%;transform:translateX(-50%);bottom:-6px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.12);cursor:pointer}
-  .children{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0;position:relative;z-index:2;align-items:flex-start;justify-content:center;width:100%}
+  /* Mỗi level hiển thị trên 1 hàng, không xuống dòng; khi tràn ngang sẽ cuộn theo .tree-area */
+  .children{display:flex;gap:12px;flex-wrap:nowrap;margin:10px 0;position:relative;z-index:2;align-items:flex-start;justify-content:flex-start;width:max-content}
   .child-couple{display:flex;flex-direction:column;align-items:center}
   .spouse-small{position:relative;padding-bottom:18px}
   .role-tag{font-size:11px;color:#555;margin-left:4px}
@@ -163,6 +168,11 @@ export class TreePage implements OnInit, AfterViewInit {
   zoom = 1;
   overlayW = 0; overlayH = 0;
   boxScale = 1;
+  // Panning state
+  spaceKey = false; // true khi giữ phím Space
+  isPanning = false;
+  private panStart = { x: 0, y: 0 };
+  private scrollStart = { left: 0, top: 0 };
 
   @ViewChild('treeAreaRef') treeAreaEl?: ElementRef<HTMLDivElement>;
   @ViewChild('canvasRef') canvasEl?: ElementRef<HTMLDivElement>;
@@ -297,41 +307,38 @@ export class TreePage implements OnInit, AfterViewInit {
     })
   }
 
-  addChild(node: Member | null){
+  async addChild(node: Member | null){
     if (!node || node.gender !== 'female') { this.snack.open('Chỉ thêm con từ người mẹ', 'Đóng', { duration: 2000 }); return; }
     this.ctx.visible = false;
     const childName = prompt('Họ tên con');
     if (!childName) return;
-    // Tạo con: xác định cha hợp lệ là hôn phối nam của người mẹ (nếu có)
-    const father = this.resolveFatherForMother(node);
+    const father = await this.resolveFatherForMotherAsync(node);
     const payload: any = { fullName: childName, family: this.selectedFamilyId!, mother: node.id };
     if (father) payload.father = father.id;
-    this.ensureUnionIfNeeded(payload.mother, payload.father).then(()=>{
-      this.membersApi.create(payload).subscribe({
-        next: _=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
-        error: e=>{ const msg = e?.error?.message || 'Thêm con thất bại'; this.snack.open(msg, 'Đóng', { duration: 2000 }); },
-      })
-    })
+    await this.ensureUnionIfNeeded(payload.mother, payload.father);
+    this.membersApi.create(payload).subscribe({
+      next: _=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
+      error: e=>{ const msg = e?.error?.message || 'Thêm con thất bại'; this.snack.open(msg, 'Đóng', { duration: 2000 }); },
+    });
   }
 
-  quickAddChild(mother: Member){
+  async quickAddChild(mother: Member){
     if (mother.gender !== 'female') return;
     const baseName = prompt('Tên con?');
     if (!baseName) return;
-    const father = this.resolveFatherForMother(mother);
+    const father = await this.resolveFatherForMotherAsync(mother);
     const payload: any = { fullName: baseName, family: this.selectedFamilyId!, mother: mother.id };
     if (father) payload.father = father.id;
-    this.ensureUnionIfNeeded(payload.mother, payload.father).then(()=>{
-      this.membersApi.create(payload).subscribe({
-        next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
-        error: (e)=> this.snack.open(e?.error?.message || 'Thêm con thất bại', 'Đóng', { duration: 2000 })
-      })
-    })
+    await this.ensureUnionIfNeeded(payload.mother, payload.father);
+    this.membersApi.create(payload).subscribe({
+      next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
+      error: (e)=> this.snack.open(e?.error?.message || 'Thêm con thất bại', 'Đóng', { duration: 2000 })
+    });
   }
   // Click anchor logic: nếu chủ hộp là con gái và spouse là chồng -> dùng chồng làm gốc, coi chồng là "mẹ" để có điểm xuất phát đường
-  onAnchorClick(owner: Member, spouse: Member){
+  async onAnchorClick(owner: Member, spouse: Member){
     // Nếu spouse là nữ thì xử lý như trước (thêm con từ mẹ)
-    if (spouse.gender === 'female') { this.quickAddChild(spouse); return; }
+    if (spouse.gender === 'female') { await this.quickAddChild(spouse); return; }
     // Nếu owner là nữ và spouse là nam => thêm con từ anchor của chồng nhưng vẫn gán mother = owner
     if (owner.gender === 'female' && spouse.gender === 'male'){
       const baseName = prompt('Tên con?');
@@ -339,16 +346,15 @@ export class TreePage implements OnInit, AfterViewInit {
       const payload: any = { fullName: baseName, family: this.selectedFamilyId!, mother: owner.id };
       // father chính là spouse nam
       payload.father = spouse.id;
-      this.ensureUnionIfNeeded(payload.mother, payload.father).then(()=>{
-        this.membersApi.create(payload).subscribe({
-          next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
-          error: (e)=> this.snack.open(e?.error?.message || 'Thêm con thất bại', 'Đóng', { duration: 2000 })
-        })
-      })
+      await this.ensureUnionIfNeeded(payload.mother, payload.father);
+      this.membersApi.create(payload).subscribe({
+        next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
+        error: (e)=> this.snack.open(e?.error?.message || 'Thêm con thất bại', 'Đóng', { duration: 2000 })
+      });
       return;
     }
     // Trường hợp khác fallback
-    this.quickAddChild(spouse);
+    await this.quickAddChild(spouse);
   }
 
   ngAfterViewInit(){
@@ -459,11 +465,19 @@ export class TreePage implements OnInit, AfterViewInit {
     }
     return levels;
   }
-  private resolveFatherForMother(mother: Member): Member | null {
+  private async resolveFatherForMotherAsync(mother: Member): Promise<Member | null> {
     const partners = this.spousesByMember[mother.id!] || [];
     const males = partners.filter(p => p.gender === 'male');
     if (males.length === 1) return males[0];
-    if (males.length > 1) return males[0]; // TODO: nếu nhiều hơn 1, sau này mở dialog chọn
+    if (males.length > 1){
+      // Mở dialog chọn cha
+      try {
+        const ref = this.dialog.open(TreeSelectFatherDialog, { data: { mother, fathers: males }, width: '420px' });
+        const picked = await ref.afterClosed().toPromise();
+        if (picked) return picked;
+      } catch { /* ignore */ }
+      return null; // hủy chọn => không gán cha
+    }
     // fallback: nếu mẹ là vợ của root nam thì dùng root làm cha
     if (this.root && this.root.gender === 'male'){
       const rootPartners = this.spousesByMember[this.root.id!] || [];
@@ -514,4 +528,46 @@ export class TreePage implements OnInit, AfterViewInit {
     setTimeout(()=> this.computeConnections(), 50);
   }
   genderColor(g?: string){ return (g==='male') ? '#1976d2' : (g==='female' ? '#d81b60' : '#888'); }
+  // Panning handlers
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(ev: KeyboardEvent){
+    if (ev.code === 'Space' && !this.spaceKey){ this.spaceKey = true; ev.preventDefault(); }
+  }
+  @HostListener('window:keyup', ['$event'])
+  handleKeyUp(ev: KeyboardEvent){
+    if (ev.code === 'Space'){ this.spaceKey = false; this.isPanning = false; }
+  }
+  onMouseDown(ev: MouseEvent){
+    if (!this.spaceKey || !this.treeAreaEl) return;
+    this.isPanning = true;
+    this.panStart = { x: ev.clientX, y: ev.clientY };
+    this.scrollStart = { left: this.treeAreaEl.nativeElement.scrollLeft, top: this.treeAreaEl.nativeElement.scrollTop };
+    ev.preventDefault();
+  }
+  onMouseMove(ev: MouseEvent){
+    if (!this.isPanning || !this.treeAreaEl) return;
+    const dx = ev.clientX - this.panStart.x;
+    const dy = ev.clientY - this.panStart.y;
+    this.treeAreaEl.nativeElement.scrollLeft = this.scrollStart.left - dx;
+    this.treeAreaEl.nativeElement.scrollTop = this.scrollStart.top - dy;
+  }
+  onMouseUp(){
+    this.isPanning = false;
+  }
+  centerRoot(){
+    if (!this.root || !this.husbandEl || !this.treeAreaEl) return;
+    const area = this.treeAreaEl.nativeElement;
+    const areaRect = area.getBoundingClientRect();
+    const coupleBox = this.husbandEl.nativeElement.parentElement as HTMLElement;
+    if (!coupleBox) return;
+    const boxRect = coupleBox.getBoundingClientRect();
+    const currentLeft = area.scrollLeft;
+    const deltaLeft = (boxRect.left - areaRect.left) + boxRect.width/2 - areaRect.width/2;
+    area.scrollLeft = currentLeft + deltaLeft;
+    // Center vertically (optional) if tree taller than viewport
+    const currentTop = area.scrollTop;
+    const deltaTop = (boxRect.top - areaRect.top) + boxRect.height/2 - areaRect.height/2;
+    area.scrollTop = currentTop + deltaTop;
+    setTimeout(()=> this.computeConnections(), 50);
+  }
 }
