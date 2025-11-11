@@ -1,5 +1,4 @@
-import { Component, OnInit, inject, signal, AfterViewInit, ElementRef, ViewChild, ViewChildren, QueryList, HostListener } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Component, OnInit, inject, AfterViewInit, ElementRef, ViewChild, ViewChildren, QueryList, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -19,6 +18,7 @@ import { MemberService } from '../../services/member';
 import { UnionService } from '../../services/union';
 import type { Family } from '../../../families/models/family.model';
 import type { Member } from '../../models/member.model';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-tree-page',
@@ -35,86 +35,10 @@ import type { Member } from '../../models/member.model';
     MatDialogModule,
     FormsModule,
     MatInputModule,
-    TreeSelectFatherDialog,
+  // TreeSelectFatherDialog is opened dynamically (not declared in template)
+  TreeSelectFatherDialog,
   ],
-  template: `
-    <div class="tree-shell">
-      <div class="left">
-        <div class="header">
-          <mat-form-field appearance="outline" style="min-width: 220px;">
-            <mat-label>Dòng họ</mat-label>
-            <mat-select [(value)]="selectedFamilyId" (selectionChange)="onFamilyChange()">
-              <mat-option *ngFor="let f of families" [value]="f.id">{{f.name}}</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <button mat-stroked-button color="primary" (click)="createRoot()">Tạo đời đầu</button>
-          <span class="spacer"></span>
-          <mat-form-field appearance="outline" style="width:120px;">
-            <mat-label>Kích cỡ</mat-label>
-            <input matInput type="number" min="0.6" step="0.1" [(ngModel)]="boxScale" (input)="onScaleChange()" />
-          </mat-form-field>
-          <button mat-stroked-button (click)="computeConnections()">Vẽ đường nối</button>
-          <button mat-stroked-button (click)="centerRoot()">Canh giữa</button>
-          <button mat-button (click)="reload()"><mat-icon>refresh</mat-icon> Tải lại</button>
-        </div>
-            <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()">
-              <div class="canvas" #canvasRef [style.transform]="'scale(' + zoom + ')'" [style.fontSize.px]="12*boxScale" style="transform-origin: 0 0; position: relative; display:inline-block;">
-            <svg class="connections" *ngIf="connections.length"
-                 [attr.width]="overlayW"
-                 [attr.height]="overlayH">
-              <line *ngFor="let c of connections" [attr.x1]="c.x1" [attr.y1]="c.y1" [attr.x2]="c.x2" [attr.y2]="c.y2" [attr.stroke]="c.color" stroke-width="2" />
-            </svg>
-            <ng-container *ngIf="root; else empty">
-            <div class="tree-content">
-            <div class="couple-box" [ngStyle]="{'border-color': genderColor(root?.gender)}">
-              <div #husbandEl class="person male" (contextmenu)="openContextMenu($event, root)">
-                <div class="name">{{root.fullName}}</div>
-                <div class="meta">{{root.dob | date:'yyyy-MM-dd'}}</div>
-              </div>
-              <div class="wives-list">
-                <div class="person female" *ngFor="let s of spouses; let i = index" #wifeEl [attr.data-id]="s.id" (contextmenu)="openContextMenu($event, s)">
-                  <div class="name">{{s.fullName}} <span class="role-tag">(vợ)</span></div>
-                  <div class="meta">{{s.dob | date:'yyyy-MM-dd'}}</div>
-                  <div class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Thêm con" (click)="quickAddChild(s)"></div>
-                </div>
-              </div>
-            </div>
-            <div class="children" *ngFor="let level of levels; let li = index">
-              <div class="child-couple couple-box" *ngFor="let c of level" #childBox [ngStyle]="{'border-color': genderColor(c.gender)}">
-                <div class="person child-person" [class.male]="c.gender==='male'" [class.female]="c.gender==='female'" #childEl [attr.data-id]="c.id" [attr.data-mother]="c.mother" (contextmenu)="openContextMenu($event, c)">
-                  <div class="name">{{c.fullName}}</div>
-                  <div class="meta">{{c.dob | date:'yyyy-MM-dd'}}</div>
-                </div>
-                <div class="wives-list" *ngIf="spousesByMember[c.id!] && spousesByMember[c.id!].length">
-                  <div class="person spouse-small" *ngFor="let s of spousesByMember[c.id!]" #wifeEl [attr.data-id]="s.id" (contextmenu)="openContextMenu($event, s)" [class.male]="s.gender==='male'" [class.female]="s.gender==='female'">
-                    <div class="name">{{s.fullName}} <span class="role-tag">{{s.gender==='female'?'(vợ)':'(chồng)'}} </span></div>
-                    <div class="meta">{{s.dob | date:'yyyy-MM-dd'}}</div>
-                    <div class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Thêm con" (click)="onAnchorClick(c, s)"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            </div>
-            </ng-container>
-          </div>
-          <ng-template #empty>
-            <div class="empty">Chưa có đời đầu. Bấm "Tạo đời đầu" để bắt đầu.</div>
-          </ng-template>
-        </div>
-      </div>
-      <div class="right">
-        <!-- Chỗ trống cho về sau: legend, bộ lọc, etc. -->
-      </div>
-    </div>
-
-    <!-- Context menu primitive -->
-    <div class="ctx-menu" *ngIf="ctx.visible" [style.left.px]="ctx.x" [style.top.px]="ctx.y" (click)="ctx.visible = false">
-  <button mat-button (click)="editInfo(ctx.node)">Sửa thông tin</button>
-  <button mat-button (click)="addWife(ctx.node)">Thêm hôn phối</button>
-      <button mat-button (click)="addChild(ctx.node)" *ngIf="ctx.node?.gender==='female'">Thêm con</button>
-      <button mat-button color="warn" (click)="deleteNode(ctx.node)">Xóa</button>
-    </div>
-  `,
+  templateUrl: './tree-page.html',
   styles: [`
     .tree-shell{display:flex;height:calc(100vh - 64px);}
     .left{flex:1;display:flex;flex-direction:column;}
@@ -146,6 +70,9 @@ import type { Member } from '../../models/member.model';
     .ctx-menu{position:fixed;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:4px;display:flex;flex-direction:column;z-index:1000}
     .empty{opacity:.7}
   .name{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500}
+  .stats-inline{display:flex;gap:10px;align-items:center;margin-left:8px}
+  .stat-item{display:flex;gap:4px;align-items:baseline;font-size:12px;color:#444}
+  .stat-item strong{font-size:13px;color:#000}
   `]
 })
 export class TreePage implements OnInit, AfterViewInit {
@@ -161,6 +88,7 @@ export class TreePage implements OnInit, AfterViewInit {
   root: Member | null = null;
   spouses: Member[] = [];
   levels: Member[][] = [];
+  allMembers: Member[] = [];
   spousesByMember: Record<string, Member[]> = {};
   private memberById: Map<string, Member> = new Map();
   connections: Array<{ x1:number;y1:number;x2:number;y2:number;color:string }> = [];
@@ -172,9 +100,14 @@ export class TreePage implements OnInit, AfterViewInit {
   boxScale = 1;
   // Panning state
   spaceKey = false; // true khi giữ phím Space
-  isPanning = false;
   private panStart = { x: 0, y: 0 };
   private scrollStart = { left: 0, top: 0 };
+  isPanning = false;
+  // Cache cha ưa thích theo từng người mẹ để giảm popup chọn cha lặp lại
+  private preferredFatherByMother: Record<string, string> = {};
+  // Màu nhóm: cha nhiều vợ -> gom theo mẹ; mẹ nhiều chồng -> gom theo cha
+  private colorFatherMotherPair = new Map<string,string>(); // key: fatherId|motherId
+  private colorMotherFatherPair = new Map<string,string>(); // key: motherId|fatherId
 
   @ViewChild('treeAreaRef') treeAreaEl?: ElementRef<HTMLDivElement>;
   @ViewChild('canvasRef') canvasEl?: ElementRef<HTMLDivElement>;
@@ -184,6 +117,10 @@ export class TreePage implements OnInit, AfterViewInit {
   @ViewChildren('anchorEl') anchorEls?: QueryList<ElementRef<HTMLElement>>;
 
   ctx = { visible: false, x: 0, y: 0, node: null as (Member | null) };
+
+  stats: { totalMembers: number; totalMale: number; totalFemale: number; totalAlive: number; totalDeceased: number; totalGenerations: number } = {
+    totalMembers: 0, totalMale: 0, totalFemale: 0, totalAlive: 0, totalDeceased: 0, totalGenerations: 0
+  };
 
   ngOnInit(){
     this.familiesApi.list().subscribe(f=>{
@@ -198,28 +135,23 @@ export class TreePage implements OnInit, AfterViewInit {
   onFamilyChange(){ this.reload(); }
 
   reload(){
-  if (!this.selectedFamilyId){ this.root = null; this.spouses = []; this.levels = []; return; }
-    // đơn giản: lấy tất cả members của họ, chọn root là nam không có father/mother
+    if (!this.selectedFamilyId){ this.root = null; this.spouses = []; this.levels = []; return; }
     this.membersApi.listByFamily(this.selectedFamilyId).subscribe(members=>{
+      this.allMembers = members || [];
       const previousRootId = this.root?.id;
-      // Root chọn: ưu tiên giữ nguyên root cũ nếu còn tồn tại; nếu không, chọn nam không cha mẹ và không có trường spouse (tránh chọn chồng mới của con gái)
       let root: Member | null = null;
-      if (previousRootId){
-        root = members.find(m=> m.id === previousRootId) || null;
-      }
+      if (previousRootId){ root = members.find(m=> m.id === previousRootId) || null; }
       if (!root){
         const candidates = members.filter(m=> m.gender==='male' && !m.father && !m.mother && !m.spouse);
         if (candidates.length === 1) root = candidates[0];
         else if (candidates.length > 1){
-          // chọn người có nhiều con nhất làm root để ổn định
           const childCount = (id: string) => members.filter(c=> c.father===id).length;
           candidates.sort((a,b)=> childCount(b.id!) - childCount(a.id!));
           root = candidates[0];
         }
       }
       this.root = root;
-  if (!root){ this.spouses = []; this.levels = []; return; }
-  // spouses: lấy toàn bộ unions trong họ để map hôn phối cho mọi thành viên
+      if (!root){ this.spouses = []; this.levels = []; return; }
       this.unionsApi.list({ family: this.selectedFamilyId! }).subscribe(us=>{
         const map: Record<string, Set<string>> = {};
         const addPair = (a?: string, b?: string) => {
@@ -227,34 +159,29 @@ export class TreePage implements OnInit, AfterViewInit {
           map[a] = map[a] || new Set<string>(); map[a].add(b);
           map[b] = map[b] || new Set<string>(); map[b].add(a);
         };
-        // From unions
         us.forEach(u=>{
           const ps = (u.partners||[]) as string[];
           ps.forEach(p=> ps.forEach(q=> addPair(p, q)));
         });
-        // From explicit spouse field
         members.forEach(m=> addPair(m.id, m.spouse));
-        // Infer from children father+mother
         members.forEach(m=> addPair(m.father, (m as any).mother));
         this.spousesByMember = {};
         Object.keys(map).forEach(mid=>{
           const set = map[mid];
           this.spousesByMember[mid] = members.filter(m=> set.has(m.id!));
         });
-        // spouses of root for top couple box
-  this.spouses = this.spousesByMember[root.id!] || [];
-        // cấp màu cho toàn bộ partner (ưu tiên mẹ sẽ dùng nối)
+        this.spouses = this.spousesByMember[root.id!] || [];
         this.wifeColor.clear();
         const allPartners = Object.values(this.spousesByMember).flat();
         const seen = new Set<string>();
         allPartners.forEach((p, i)=>{ if (!seen.has(p.id!)) { this.wifeColor.set(p.id!, this.COLORS[i % this.COLORS.length]); seen.add(p.id!); } });
-        // Lịch nối sẽ được thực hiện sau khi DOM đã cập nhật QueryList (wifeEls/childEls)
+        this.colorFatherMotherPair.clear();
+        this.colorMotherFatherPair.clear();
         this.scheduleConnections();
       });
-      // Build quick index and levels: generation 2 (children of root) onward by following mother ids
       this.memberById = new Map(members.map(m=> [m.id!, m] as const));
       this.levels = this.buildLevels(members, root);
-      // Gọi schedule một lần nữa để đảm bảo sau khi levels thay đổi cũng sẽ render đúng.
+      this.computeStats();
       this.scheduleConnections();
     })
   }
@@ -314,7 +241,13 @@ export class TreePage implements OnInit, AfterViewInit {
     this.ctx.visible = false;
     const childName = prompt('Họ tên con');
     if (!childName) return;
-    const father = await this.resolveFatherForMotherAsync(node);
+    let father: Member | null = null;
+    try {
+      father = await this.resolveFatherForMotherAsync(node);
+    } catch {
+      this.snack.open('Bạn đã hủy chọn cha', 'Đóng', { duration: 1500 });
+      return;
+    }
     const payload: any = { fullName: childName, family: this.selectedFamilyId!, mother: node.id };
     if (father) payload.father = father.id;
     await this.ensureUnionIfNeeded(payload.mother, payload.father);
@@ -328,7 +261,13 @@ export class TreePage implements OnInit, AfterViewInit {
     if (mother.gender !== 'female') return;
     const baseName = prompt('Tên con?');
     if (!baseName) return;
-    const father = await this.resolveFatherForMotherAsync(mother);
+    let father: Member | null = null;
+    try {
+      father = await this.resolveFatherForMotherAsync(mother);
+    } catch {
+      this.snack.open('Bạn đã hủy chọn cha', 'Đóng', { duration: 1500 });
+      return;
+    }
     const payload: any = { fullName: baseName, family: this.selectedFamilyId!, mother: mother.id };
     if (father) payload.father = father.id;
     await this.ensureUnionIfNeeded(payload.mother, payload.father);
@@ -345,16 +284,9 @@ export class TreePage implements OnInit, AfterViewInit {
     if (owner.gender === 'female' && spouse.gender === 'male'){
       const baseName = prompt('Tên con?');
       if (!baseName) return;
-      // Nếu người mẹ có nhiều chồng, mở hộp thoại chọn cha (mặc định là spouse vừa bấm)
-      let pickedFather: Member | null = spouse;
-      const males = (this.spousesByMember[owner.id!]||[]).filter(p=> p.gender==='male');
-      if (males.length > 1){
-        const ref = this.dialog.open(TreeSelectFatherDialog, { data: { mother: owner, fathers: males }, width: '420px' });
-        const choice = await firstValueFrom(ref.afterClosed());
-        if (choice) pickedFather = choice; else return; // hủy => thoát
-      }
-      const payload: any = { fullName: baseName, family: this.selectedFamilyId!, mother: owner.id };
-      payload.father = pickedFather?.id;
+      // Anchor click trên 1 người chồng cụ thể: dùng trực tiếp người đó làm cha, KHÔNG mở dialog.
+      const payload: any = { fullName: baseName, family: this.selectedFamilyId!, mother: owner.id, father: spouse.id };
+      this.preferredFatherByMother[owner.id!] = spouse.id!; // ghi nhớ lựa chọn
       await this.ensureUnionIfNeeded(payload.mother, payload.father);
       this.membersApi.create(payload).subscribe({
         next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
@@ -377,6 +309,23 @@ export class TreePage implements OnInit, AfterViewInit {
   @HostListener('window:resize')
   onResize(){ this.computeConnections(); }
 
+  private computeStats(){
+    const ms = this.allMembers || [];
+    const male = ms.filter(m=> (m.gender||'').toLowerCase()==='male').length;
+    const female = ms.filter(m=> (m.gender||'').toLowerCase()==='female').length;
+    const deceased = ms.filter(m=> !!(m as any).dod).length;
+    const alive = ms.length - deceased;
+    const generations = this.root ? (1 + (this.levels?.length || 0)) : 0;
+    this.stats = {
+      totalMembers: ms.length,
+      totalMale: male,
+      totalFemale: female,
+      totalAlive: alive,
+      totalDeceased: deceased,
+      totalGenerations: generations
+    };
+  }
+
   computeConnections(){
     const base = (this.canvasEl?.nativeElement || this.treeAreaEl?.nativeElement);
     if (!base) return;
@@ -393,12 +342,15 @@ export class TreePage implements OnInit, AfterViewInit {
     let minX = 0, minY = 0, maxX = 0, maxY = 0;
     this.childEls?.forEach(el=>{
       const motherId = el.nativeElement.getAttribute('data-mother') || '';
+      const fatherId = el.nativeElement.getAttribute('data-father') || '';
       if (!motherId) return;
-      // Chọn anchor: ưu tiên chính người mẹ nếu có anchor; nếu không, dùng anchor của chồng (nam)
-      let anchorId: string | undefined = anchorById.has(motherId) ? motherId : undefined;
-      if (!anchorId){
+      // Anchor chọn: nếu có fatherId và có anchor của father thì dùng; nếu không, ưu tiên mẹ; cuối cùng fallback male spouse đầu tiên.
+      let anchorId: string | undefined = undefined;
+      if (fatherId && anchorById.has(fatherId)) anchorId = fatherId;
+      else if (anchorById.has(motherId)) anchorId = motherId;
+      else {
         const maleSpouse = (this.spousesByMember[motherId]||[]).find(s=> s.gender==='male');
-        if (maleSpouse) anchorId = maleSpouse.id!;
+        if (maleSpouse && anchorById.has(maleSpouse.id!)) anchorId = maleSpouse.id!;
       }
       if (!anchorId) return;
       const w = anchorById.get(anchorId);
@@ -411,8 +363,47 @@ export class TreePage implements OnInit, AfterViewInit {
       let y2 = c.top - baseRect.top;
       minX = Math.min(minX, x1, x2); maxX = Math.max(maxX, x1, x2);
       minY = Math.min(minY, y1, y2); maxY = Math.max(maxY, y1, y2);
-      const member = this.memberById.get(anchorId!);
-      const color = member?.gender==='female' ? '#d81b60' : '#1976d2';
+      // Color grouping independent of anchor
+      const mother = this.memberById.get(motherId);
+      const father = fatherId ? this.memberById.get(fatherId) : undefined;
+      let color = '#999';
+      if (father && father.gender==='male'){
+        const fatherWives = (this.spousesByMember[father.id!]||[]).filter(s=> s.gender==='female');
+        if (fatherWives.length > 1 && mother){
+          const key = father.id! + '|' + mother.id!;
+          if (!this.colorFatherMotherPair.has(key)){
+            const idx = this.colorFatherMotherPair.size % this.COLORS.length;
+            this.colorFatherMotherPair.set(key, this.COLORS[idx]);
+          }
+          color = this.colorFatherMotherPair.get(key)!;
+        } else if (mother) {
+          const motherHusbands = (this.spousesByMember[mother.id!]||[]).filter(s=> s.gender==='male');
+          if (motherHusbands.length > 1){
+            const key2 = mother.id! + '|' + father.id!;
+            if (!this.colorMotherFatherPair.has(key2)){
+              const idx2 = this.colorMotherFatherPair.size % this.COLORS.length;
+              this.colorMotherFatherPair.set(key2, this.COLORS[idx2]);
+            }
+            color = this.colorMotherFatherPair.get(key2)!;
+          } else {
+            color = '#1976d2';
+          }
+        } else {
+          color = '#1976d2';
+        }
+      } else if (mother){
+        const motherHusbands = (this.spousesByMember[mother.id!]||[]).filter(s=> s.gender==='male');
+        if (motherHusbands.length > 1 && father){
+          const key2 = mother.id! + '|' + father.id!;
+          if (!this.colorMotherFatherPair.has(key2)){
+            const idx2 = this.colorMotherFatherPair.size % this.COLORS.length;
+            this.colorMotherFatherPair.set(key2, this.COLORS[idx2]);
+          }
+          color = this.colorMotherFatherPair.get(key2)!;
+        } else {
+          color = mother.gender==='female' ? '#d81b60' : '#1976d2';
+        }
+      }
       connsRaw.push({ x1, y1, x2, y2, color, anchorId });
     });
     // Nếu có tọa độ âm (vượt trái/lên trên viewport), dịch toàn cục về dương để SVG bao hết
@@ -479,11 +470,15 @@ export class TreePage implements OnInit, AfterViewInit {
     const males = partners.filter(p => p.gender === 'male');
     if (males.length === 1) return males[0];
     if (males.length > 1){
-      // Mở dialog chọn cha
+      // Nếu đã có lựa chọn cha ưa thích cho mẹ này và vẫn còn hợp lệ thì dùng luôn
+      const cachedId = this.preferredFatherByMother[mother.id!];
+      const cached = cachedId ? males.find(m => m.id === cachedId) : undefined;
+      if (cached) return cached;
+      // Mở dialog chọn cha (bắt buộc). Nếu hủy: ném lỗi để caller dừng lại.
       const ref = this.dialog.open(TreeSelectFatherDialog, { data: { mother, fathers: males }, width: '420px' });
       const picked = await firstValueFrom(ref.afterClosed());
-      if (picked) return picked;
-      return null; // hủy chọn => không gán cha
+      if (picked) { this.preferredFatherByMother[mother.id!] = picked.id!; return picked; }
+      throw new Error('cancelled');
     }
     // fallback: nếu mẹ là vợ của root nam thì dùng root làm cha
     if (this.root && this.root.gender === 'male'){
@@ -496,10 +491,10 @@ export class TreePage implements OnInit, AfterViewInit {
   private async ensureUnionIfNeeded(motherId?: string, fatherId?: string): Promise<void>{
     if (!motherId || !fatherId) return; // chỉ cần khi đủ cả hai
     try {
-      const unions = await this.unionsApi.list({ family: this.selectedFamilyId!, partner: motherId }).toPromise();
+      const unions = await firstValueFrom(this.unionsApi.list({ family: this.selectedFamilyId!, partner: motherId }));
       const exists = unions?.some(u => (u.partners||[]).includes(motherId) && (u.partners||[]).includes(fatherId));
       if (exists) return;
-      await this.unionsApi.create({ family: this.selectedFamilyId!, partners: [motherId, fatherId] }).toPromise();
+      await firstValueFrom(this.unionsApi.create({ family: this.selectedFamilyId!, partners: [motherId, fatherId] }));
     } catch (e){ /* ignore, sẽ fail ở bước create con nếu có vấn đề khác */ }
   }
   deleteNode(node: Member | null){
@@ -576,5 +571,12 @@ export class TreePage implements OnInit, AfterViewInit {
     const deltaTop = (boxRect.top - areaRect.top) + boxRect.height/2 - areaRect.height/2;
     area.scrollTop = currentTop + deltaTop;
     setTimeout(()=> this.computeConnections(), 50);
+  }
+  // Click handler on entire spouse card to make add-child easier, especially for male spouses
+  async onSpousePersonClick(owner: Member, spouse: Member, ev: MouseEvent){
+    // ignore if right-click (context menu)
+    if (ev.button === 2) return;
+    // behave like anchor click: add child under mother
+    await this.onAnchorClick(owner, spouse);
   }
 }
