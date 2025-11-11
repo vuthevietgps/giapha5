@@ -1,0 +1,16 @@
+.users-toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+}
+
+.filters-form {
+	display: grid;
+	grid-template-columns: 1fr 240px auto auto;
+	gap: 12px;
+	align-items: end;
+}
+
+.table-wrapper {
+	overflow: auto;
+}

@@ -1,0 +1,145 @@
+<mat-card class="card page-container">
+  <form [formGroup]="form" (ngSubmit)="save()" style="display:grid; gap: 16px; max-width: 800px;">
+    <h2>{{ id ? 'Sửa thành viên' : 'Thêm thành viên' }}</h2>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <mat-form-field appearance="outline">
+        <mat-label>Họ và Tên</mat-label>
+        <input matInput formControlName="fullName" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Dòng họ</mat-label>
+        <mat-select formControlName="family" required>
+          <mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ảnh (URL)</mat-label>
+        <input matInput formControlName="photoUrl" />
+      </mat-form-field>
+
+      <div>
+        <label for="photoFile">Tải ảnh lên</label>
+        <input id="photoFile" type="file" (change)="onFileSelected($event)" accept="image/*" />
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Số điện thoại</mat-label>
+        <input matInput formControlName="phone" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Email đăng nhập</mat-label>
+        <input matInput formControlName="email" type="email" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Mật khẩu</mat-label>
+        <input matInput formControlName="password" type="password" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Bố</mat-label>
+        <mat-select formControlName="father" (openedChange)="onRelationSelectOpened($event)">
+          <mat-option [value]="''">(Không chọn)</mat-option>
+          <mat-option *ngFor="let m of fathersOptions" [value]="m.id">{{ m.fullName }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Mẹ</mat-label>
+        <mat-select formControlName="mother" (openedChange)="onRelationSelectOpened($event)">
+          <mat-option [value]="''">(Không chọn)</mat-option>
+          <mat-option *ngFor="let m of mothersOptions" [value]="m.id">{{ m.fullName }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Vợ/Chồng</mat-label>
+        <mat-select formControlName="spouse" (openedChange)="onRelationSelectOpened($event)">
+          <mat-option [value]="''">(Không chọn)</mat-option>
+          <mat-option *ngFor="let m of spouseOptions" [value]="m.id">{{ m.fullName }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Giới tính</mat-label>
+        <mat-select formControlName="gender">
+          <mat-option value="male">Nam</mat-option>
+          <mat-option value="female">Nữ</mat-option>
+          <mat-option value="other">Khác</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ngày sinh</mat-label>
+        <input matInput type="date" formControlName="dob" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ngày mất</mat-label>
+        <input matInput type="date" formControlName="dod" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Chức vụ</mat-label>
+        <mat-select formControlName="position">
+          <mat-option [value]="''">(Không chọn)</mat-option>
+          <mat-option *ngFor="let p of positions" [value]="p.id">{{ p.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="grid-column: 1 / -1;">
+        <mat-label>Tiểu sử</mat-label>
+        <textarea matInput formControlName="bio" rows="4"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="grid-column: 1 / -1;">
+        <mat-label>Chọn con</mat-label>
+        <mat-select [value]="selectedChildrenIds" (selectionChange)="selectedChildrenIds = $event.value" (openedChange)="onRelationSelectOpened($event)" multiple>
+          <mat-option *ngFor="let m of childrenOptions" [value]="m.id">{{ m.fullName }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Unions section (nhiều vợ/chồng) -->
+      <div style="grid-column: 1 / -1; border: 1px solid #ccc; padding: 16px; border-radius: 4px;" *ngIf="id">
+        <h3 style="margin-top: 0;">Quan hệ hôn nhân (nhiều vợ/chồng)</h3>
+        
+        <!-- Existing unions -->
+        <div *ngFor="let union of unions" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f5f5f5; border-radius: 4px;">
+          <span style="flex: 1;">{{ getPartnerName(union) }}</span>
+          <span *ngIf="union.startDate" style="font-size: 0.9em; color: #666;">({{ union.startDate | date:'yyyy' }})</span>
+          <button mat-icon-button color="warn" (click)="removeUnion(union)" type="button">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+
+        <!-- Add new union -->
+        <div style="display: flex; gap: 8px; align-items: end;">
+          <mat-form-field appearance="outline" style="flex: 1;">
+            <mat-label>Thêm vợ/chồng mới</mat-label>
+            <mat-select [(value)]="newUnionPartner" (openedChange)="onRelationSelectOpened($event)">
+              <mat-option value="">(Chọn người)</mat-option>
+              <mat-option *ngFor="let m of spouseOptions" [value]="m.id">{{ m.fullName }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-flat-button color="primary" (click)="addUnion()" [disabled]="!newUnionPartner" type="button">
+            Thêm
+          </button>
+        </div>
+        
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 0; margin-top: 8px;">
+          <mat-icon style="vertical-align: middle; margin-right: 4px; font-size: 16px; height: 16px; width: 16px;">info</mat-icon>
+          Unions cho phép một người có nhiều vợ/chồng và sẽ hiển thị trong cây gia phả.
+        </p>
+      </div>
+    </div>
+
+    <div style="display:flex; gap: 8px;">
+      <button mat-flat-button color="primary" type="submit">Lưu</button>
+      <a mat-stroked-button routerLink="/members">Hủy</a>
+    </div>
+  </form>
+</mat-card>

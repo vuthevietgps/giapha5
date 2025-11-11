@@ -1,0 +1,21 @@
+<mat-toolbar color="transparent" class="toolbar">
+  <span class="spacer"></span>
+  <button mat-raised-button color="primary" (click)="openCreateDialog()">
+    <mat-icon>add</mat-icon>
+    Thêm bài viết
+  </button>
+</mat-toolbar>
+
+<mat-card>
+  <mat-card-title>Danh sách bài viết</mat-card-title>
+  <mat-card-content>
+    <mat-nav-list>
+      <a mat-list-item *ngFor="let p of posts" [routerLink]="['/posts', p.id]">
+        <mat-icon matListItemIcon>article</mat-icon>
+        <span matListItemTitle>{{ p.title }}</span>
+      </a>
+      <div *ngIf="!posts?.length" style="padding: 12px; color: #777">Chưa có bài viết nào.</div>
+    </mat-nav-list>
+  </mat-card-content>
+  
+</mat-card>

@@ -1,0 +1,80 @@
+<mat-toolbar color="primary" class="users-toolbar">
+	<span>Quản lý người dùng</span>
+	<span style="flex: 1 1 auto"></span>
+	<a mat-flat-button color="accent" routerLink="/users/new">
+		<mat-icon>add</mat-icon>
+		Thêm mới
+	</a>
+</mat-toolbar>
+
+<!-- Khu vực tìm kiếm & lọc -->
+<mat-card class="card page-container">
+	<form [formGroup]="filterForm" class="filters-form">
+		<mat-form-field appearance="outline">
+			<mat-label>Tìm kiếm (họ tên, email)</mat-label>
+			<input matInput placeholder="Nhập từ khóa" formControlName="q" />
+		</mat-form-field>
+
+		<mat-form-field appearance="outline">
+			<mat-label>Lọc theo vai trò</mat-label>
+			<mat-select formControlName="role">
+				<mat-option value="">Tất cả</mat-option>
+				<mat-option *ngFor="let r of roles" [value]="r">{{ roleLabels[r] }}</mat-option>
+			</mat-select>
+		</mat-form-field>
+
+		<button mat-stroked-button color="primary" type="button" (click)="applyFilter()">
+			<mat-icon>search</mat-icon>
+			Tìm kiếm
+		</button>
+		<button mat-stroked-button type="button" (click)="resetFilter()">
+			<mat-icon>refresh</mat-icon>
+			Xóa lọc
+		</button>
+	</form>
+</mat-card>
+
+<!-- Danh sách người dùng -->
+<mat-card class="card page-container table-wrapper">
+	<table mat-table [dataSource]="filteredData" class="mat-elevation-z2" style="width: 100%">
+		<ng-container matColumnDef="fullName">
+			<th mat-header-cell *matHeaderCellDef> Họ tên </th>
+			<td mat-cell *matCellDef="let element"> {{ element.fullName }} </td>
+		</ng-container>
+
+		<ng-container matColumnDef="email">
+			<th mat-header-cell *matHeaderCellDef> Email </th>
+			<td mat-cell *matCellDef="let element"> {{ element.email }} </td>
+		</ng-container>
+
+		<ng-container matColumnDef="role">
+			<th mat-header-cell *matHeaderCellDef> Vai trò </th>
+			<td mat-cell *matCellDef="let element"> {{ roleLabel(element.role) }} </td>
+		</ng-container>
+
+		<ng-container matColumnDef="actions">
+			<th mat-header-cell *matHeaderCellDef> Hành động </th>
+			<td mat-cell *matCellDef="let element">
+				<a mat-stroked-button color="primary" [routerLink]="['/users', element.id, 'edit']">
+					<mat-icon>edit</mat-icon>
+					Sửa
+				</a>
+				<button mat-stroked-button color="warn" (click)="delete(element.id)">
+					<mat-icon>delete</mat-icon>
+					Xóa
+				</button>
+			</td>
+		</ng-container>
+
+		<tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+		<tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+	</table>
+</mat-card>
+
+<!-- Empty state -->
+<mat-card class="card page-container" *ngIf="filteredData.length === 0">
+	<div style="display:flex; align-items:center; gap:12px; color:#6b7280;">
+		<mat-icon>info</mat-icon>
+		Không có dữ liệu phù hợp.
+	</div>
+</mat-card>

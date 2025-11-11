@@ -1,0 +1,40 @@
+<mat-sidenav-container class="app-shell" style="height: 100vh;">
+	<mat-sidenav mode="side" opened style="width: 260px;">
+		<div style="display:flex; align-items:center; gap:8px; padding: 16px;">
+			<mat-icon>account_tree</mat-icon>
+			<strong>Gia phả Online</strong>
+		</div>
+		<mat-nav-list>
+			<a mat-list-item routerLink="/users" routerLinkActive="active">
+				<mat-icon matListItemIcon>group</mat-icon>
+				<span matListItemTitle>Người dùng</span>
+			</a>
+			<a mat-list-item routerLink="/families" routerLinkActive="active">
+				<mat-icon matListItemIcon>diversity_3</mat-icon>
+				<span matListItemTitle>Dòng họ</span>
+			</a>
+			<a mat-list-item routerLink="/positions" routerLinkActive="active">
+				<mat-icon matListItemIcon>badge</mat-icon>
+				<span matListItemTitle>Chức vụ</span>
+			</a>
+			<a mat-list-item routerLink="/members" routerLinkActive="active">
+				<mat-icon matListItemIcon>person</mat-icon>
+				<span matListItemTitle>Thành viên</span>
+			</a>
+			<a mat-list-item routerLink="/members/tree" routerLinkActive="active">
+				<mat-icon matListItemIcon>account_tree</mat-icon>
+				<span matListItemTitle>Cây gia phả</span>
+			</a>
+			<a mat-list-item routerLink="/posts" routerLinkActive="active">
+				<mat-icon matListItemIcon>article</mat-icon>
+				<span matListItemTitle>Bài viết</span>
+			</a>
+			<!-- Member tree menu -->
+			<!-- Có thể thêm các menu khác sau này -->
+		</mat-nav-list>
+	</mat-sidenav>
+
+	<mat-sidenav-content>
+		<router-outlet />
+	</mat-sidenav-content>
+</mat-sidenav-container>

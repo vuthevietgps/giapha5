@@ -1,0 +1,176 @@
+<mat-card class="page-container">
+  <h2 class="page-title">Cây gia phả</h2>
+
+  <div class="controls">
+    <mat-form-field appearance="outline">
+      <mat-label>Dòng họ</mat-label>
+      <mat-select [(value)]="selectedFamilyId" (selectionChange)="reload()">
+        <mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button mat-stroked-button color="primary" (click)="reload()">
+      <mat-icon>refresh</mat-icon>
+      Tải lại
+    </button>
+    
+    <button mat-stroked-button [matMenuTriggerFor]="bgMenu">
+      <mat-icon>image</mat-icon>
+      Ảnh nền
+    </button>
+    <mat-menu #bgMenu="matMenu">
+      <button mat-menu-item (click)="bgFile.click()">
+        <mat-icon>upload</mat-icon>
+        <span>Tải ảnh mới…</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="chooseBackground(undefined)">
+        <mat-icon>hide_image</mat-icon>
+        <span>Không dùng ảnh nền</span>
+      </button>
+      <button mat-menu-item *ngFor="let b of backgrounds" (click)="chooseBackground(b.id)">
+        <mat-icon [ngClass]="{'accent': selectedBgId === b.id}">check_circle</mat-icon>
+        <span>{{ b.name }}</span>
+      </button>
+    </mat-menu>
+    <input type="file" accept="image/*" (change)="onUploadBackground($event)" style="display:none" #bgFile>
+
+    <button mat-stroked-button [matMenuTriggerFor]="frameMenu">
+      <mat-icon>grid_on</mat-icon>
+      Khung
+    </button>
+    
+    <button mat-stroked-button (click)="centerTree()" title="Đưa cây về giữa màn hình">
+      <mat-icon>center_focus_strong</mat-icon>
+      Căn giữa
+    </button>
+    
+    <div class="scroll-help" title="Hướng dẫn điều khiển">
+      <mat-icon>info</mat-icon>
+      <span>Kéo thả: Di chuyển | Scroll: Cuộn | Ctrl+Scroll: Phóng to/thu nhỏ</span>
+    </div>
+    <mat-menu #frameMenu="matMenu">
+      <button mat-menu-item *ngFor="let f of framePresets" (click)="chooseFrame(f.id)">
+        <mat-icon [ngClass]="{'accent': selectedFrameId === f.id}">check_circle</mat-icon>
+        <span>{{ f.name }}</span>
+      </button>
+    </mat-menu>
+    
+    <div class="stats-inline" aria-label="Phả đồ">
+      <div class="stat-item"><span>Tổng số thành viên</span><strong>{{ stats.totalMembers }}</strong></div>
+      <div class="stat-item"><span>Tổng số đời</span><strong>{{ stats.totalGenerations }}</strong></div>
+      <div class="stat-item stat-male"><span>Tổng số Nam</span><strong>{{ stats.totalMale }}</strong></div>
+      <div class="stat-item stat-female"><span>Tổng số Nữ</span><strong>{{ stats.totalFemale }}</strong></div>
+      <div class="stat-item stat-alive"><span>Còn sống</span><strong>{{ stats.totalAlive }}</strong></div>
+      <div class="stat-item stat-deceased"><span>Đã mất</span><strong>{{ stats.totalDeceased }}</strong></div>
+    </div>
+  </div>
+
+  <div class="content-row">
+    <div class="tree-container" #treeContainer
+      [class.no-scroll-x]="!scrollXEnabled"
+      [class.no-scroll-y]="!scrollYEnabled"
+         [style.height.px]="containerHeight"
+         [style.background-image]="selectedBgUrl ? 'url(' + selectedBgUrl + ')' : ''"
+         [style.background-size]="'100% 100%'"
+         [style.background-position]="'center'"
+         [style.background-repeat]="'no-repeat'"
+         (wheel)="onWheel($event)" (mousemove)="onMouseMove($event)" (mousedown)="onMouseDown($event)" (mouseup)="onMouseUp()">
+      <!-- Single viewport-offset container for both spacer and content -->
+      <div class="viewport-offset" [style.left.px]="framePad.left" [style.top.px]="framePad.top">
+        <!-- Invisible scroll spacer with same transform as content -->
+        <div class="scroll-spacer-transformed" [style.transform]="'translate(' + viewportShiftX + 'px, ' + viewportShiftY + 'px) scale(' + scale + ')'">
+          <div class="scroll-spacer" [style.width.px]="scrollSpacerWidth" [style.height.px]="scrollSpacerHeight"></div>
+        </div>
+        
+        <!-- Actual content with same transform -->
+        <div class="viewport-inner" [style.transform]="'translate(' + viewportShiftX + 'px, ' + viewportShiftY + 'px) scale(' + scale + ')'">
+        <svg class="connections" preserveAspectRatio="none" [style.height.px]="innerHeight" [style.width.px]="innerWidth">
+        <g class="nodes">
+          <circle *ngFor="let n of nodes" [attr.cx]="n.x" [attr.cy]="n.y" [attr.r]="n.r || 3" [attr.fill]="n.color || '#999'" />
+        </g>
+        <g class="paths">
+            <path *ngFor="let conn of connections" [attr.d]="conn.d" [attr.stroke]="conn.color || '#999'" stroke-width="2" vector-effect="non-scaling-stroke" fill="none" stroke-linecap="round"></path>
+        </g>
+        </svg>
+        <div class="tree" [style.height.px]="innerHeight" [style.width.px]="innerWidth">
+        <ng-container *ngFor="let row of levels; let i = index">
+          <div class="couple" #coupleRef [attr.data-key]="c.key" *ngFor="let c of row"
+               [style.transform]="'translate(' + (pos[c.key]?.x || 0) + 'px,' + (pos[c.key]?.y || 0) + 'px)'
+               "
+               style="position:absolute;">
+            <div class="box" *ngIf="!c.hideInHub" [style.border-left]="coupleColors[c.key] ? '4px solid ' + coupleColors[c.key] : ''">
+              <div class="box-inner">
+                <div class="male-col">
+                  <div class="person male" *ngIf="c.male && !c.hideMale" (contextmenu)="openContextMenu($event, c.male)">
+                    <img class="avatar" [src]="c.male.photoUrl || 'assets/avatar-male.svg'" alt="" />
+                    <div class="meta">
+                      <div class="name">{{ c.male.fullName }}</div>
+                      <div class="years" *ngIf="c.male.dob as d">{{ (d | date:'yyyy') || '' }}</div>
+                    </div>
+                  </div>
+                  <!-- Multiple husbands list (for female hubs) -->
+                  <div class="husbands-list" *ngIf="c.extraHusbands?.length">
+                    <div class="person" *ngFor="let h of c.extraHusbands" (contextmenu)="openContextMenu($event, h)">
+                      <img class="avatar" [src]="h?.photoUrl || 'assets/avatar-male.svg'" alt="" />
+                      <div class="meta">
+                        <div class="name">{{ h?.fullName }}</div>
+                        <div class="years" *ngIf="h?.dob as d">{{ (d | date:'yyyy') || '' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="wives-list" *ngIf="c.female || (c.extraWives?.length)">
+                  <div class="person" *ngIf="c.female && !c.hideFemale" (contextmenu)="openContextMenu($event, c.female)" [attr.data-mother-id]="c.female.id">
+                    <img class="avatar" [src]="c.female.photoUrl || 'assets/avatar-female.svg'" alt="" />
+                    <div class="meta">
+                      <div class="name">{{ c.female.fullName }}</div>
+                      <div class="years" *ngIf="c.female.dob as d">{{ (d | date:'yyyy') || '' }}</div>
+                    </div>
+                  </div>
+                  <div class="person" *ngFor="let w of c.extraWives" (contextmenu)="openContextMenu($event, w)" [attr.data-mother-id]="w?.id">
+                    <img class="avatar" [src]="w?.photoUrl || 'assets/avatar-female.svg'" alt="" />
+                    <div class="meta">
+                      <div class="name">{{ w?.fullName }}</div>
+                      <div class="years" *ngIf="w?.dob as d">{{ (d | date:'yyyy') || '' }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="placeholder" *ngIf="!c.male && !c.female" (contextmenu)="openContextMenu($event, undefined)">
+                  <mat-icon>person</mat-icon>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+        </div>
+      </div>
+    </div>
+  <mat-menu #menu="matMenu" [xPosition]="'after'" [yPosition]="'below'" [hasBackdrop]="true" [overlapTrigger]="false">
+      <button mat-menu-item (click)="editPerson()">Sửa</button>
+      <button mat-menu-item (click)="viewBio()">Xem tiểu sử</button>
+      <button mat-menu-item (click)="deletePerson()">Xóa</button>
+      <button mat-menu-item [matMenuTriggerFor]="parentMenu">Đặt làm con của</button>
+      <mat-menu #parentMenu="matMenu">
+        <ng-container *ngIf="candidateParents?.length; else noParentChoices">
+          <button mat-menu-item *ngFor="let p of candidateParents" (click)="assignParent(p.key)">
+            <span>
+              {{ p.male?.fullName || '—' }}
+              <span *ngIf="p.female"> &amp; {{ p.female.fullName }}</span>
+            </span>
+          </button>
+        </ng-container>
+        <ng-template #noParentChoices>
+          <button mat-menu-item disabled>Không có cặp cha mẹ phù hợp</button>
+        </ng-template>
+      </mat-menu>
+      <button mat-menu-item (click)="addChild()">Thêm con</button>
+      <button mat-menu-item (click)="addSpouse()">Thêm vợ/chồng</button>
+      <button mat-menu-item (click)="normalizeUnions()">Chuẩn hóa union</button>
+      <button mat-menu-item (click)="manageUnions()">Quản lý nhiều vợ/chồng</button>
+      <button mat-menu-item (click)="branchView()">Duyệt riêng nhánh này</button>
+      <button mat-menu-item (click)="closeMenu()">Thoát</button>
+    </mat-menu>
+    <div [matMenuTriggerFor]="menu" #menuTrigger="matMenuTrigger" [style.left]="contextMenuPosition.x" [style.top]="contextMenuPosition.y" style="position: fixed;"></div>
+      </div>
+  </div>
+</mat-card>

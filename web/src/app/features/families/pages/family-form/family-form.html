@@ -1,0 +1,31 @@
+<p>family-form works!</p>
+<mat-card class="card page-container">
+	<form [formGroup]="form" (ngSubmit)="save()" style="display:grid; gap: 16px; max-width: 640px;">
+		<h2>{{ id ? 'Sửa dòng họ' : 'Thêm dòng họ' }}</h2>
+
+		<mat-form-field appearance="outline">
+			<mat-label>Tên dòng họ</mat-label>
+			<input matInput formControlName="name" />
+		</mat-form-field>
+
+		<mat-form-field appearance="outline">
+			<mat-label>Tên người liên hệ</mat-label>
+			<input matInput formControlName="contactName" />
+		</mat-form-field>
+
+		<mat-form-field appearance="outline">
+			<mat-label>Số điện thoại</mat-label>
+			<input matInput formControlName="contactPhone" />
+		</mat-form-field>
+
+		<mat-form-field appearance="outline">
+			<mat-label>Địa chỉ dòng họ</mat-label>
+			<input matInput formControlName="address" />
+		</mat-form-field>
+
+		<div style="display:flex; gap: 8px;">
+			<button mat-flat-button color="primary" type="submit">Lưu</button>
+			<a mat-stroked-button routerLink="/families">Hủy</a>
+		</div>
+	</form>
+</mat-card>

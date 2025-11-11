@@ -1,0 +1,32 @@
+/* Angular Material prebuilt theme */
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Global styles */
+html, body {
+	height: 100%;
+}
+body {
+	margin: 0;
+	font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+	background: #f6f7fb;
+	color: #1f2937;
+}
+
+.app-shell {
+	--sidebar-width: 260px;
+}
+
+.page-container {
+	padding: 16px;
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+.toolbar-spacer {
+	flex: 1 1 auto;
+}
+
+.card {
+	margin: 12px;
+}
+/* You can add global styles to this file, and also import other style files */

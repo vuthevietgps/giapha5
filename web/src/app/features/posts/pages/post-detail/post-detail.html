@@ -1,0 +1,11 @@
+<mat-card *ngIf="post as p">
+  <mat-card-title>{{ p.title }}</mat-card-title>
+  <mat-card-content>
+    <div class="content"><pre>{{ p.content }}</pre></div>
+  </mat-card-content>
+  <mat-card-actions>
+    <a mat-button routerLink="/posts">Quay lại danh sách</a>
+  </mat-card-actions>
+</mat-card>
+
+<div *ngIf="!post" style="padding: 16px">Đang tải...</div>

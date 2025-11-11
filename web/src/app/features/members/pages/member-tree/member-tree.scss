@@ -1,0 +1,277 @@
+// Page layout
+.page-container {
+  display: block;
+  padding: 16px;
+  max-width: none; // override global container limit for full-width canvas
+  margin: 0;       // align to sidebar edge
+}
+
+.page-title {
+  margin-top: 0;
+}
+
+.controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.scroll-help {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #666;
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-left: auto;
+  
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.content-row {
+  display: flex;
+  gap: 12px;
+}
+
+.stats-panel {
+  width: 260px;
+  flex: 0 0 260px;
+}
+
+// Tree container and viewport
+.tree-container {
+  position: relative;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: auto;
+  min-height: 400px;
+  flex: 1 1 auto;
+  cursor: grab;
+  
+  &:active {
+    cursor: grabbing;
+  }
+  
+  // Smooth scrolling behavior
+  scroll-behavior: smooth;
+  
+  // Custom scrollbar styling (WebKit)
+  &::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 6px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 6px;
+    
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+}
+
+.tree-container.no-scroll-x { overflow-x: hidden; }
+.tree-container.no-scroll-y { overflow-y: hidden; }
+
+.viewport-inner {
+  transform-origin: 0 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1; // render above background
+}
+
+.bg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  filter: none; // no blur per requirement
+  opacity: 1;
+  pointer-events: none;
+}
+
+.viewport-offset {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.tree {
+  position: relative;
+  z-index: 2; // boxes above connections if overlapping
+}
+
+.scroll-spacer-transformed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.scroll-spacer {
+  display: block;
+  pointer-events: none;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed #eee;
+}
+.stat-item:last-child { border-bottom: none; }
+
+.stats-inline {
+  display: grid;
+  grid-template-columns: repeat(6, auto);
+  gap: 12px 24px;
+  padding-left: 8px;
+}
+.stats-inline .stat-item {
+  border: none;
+  padding: 0;
+  
+  strong {
+    margin-left: 8px;
+  }
+  
+  // Màu sắc phân biệt cho các thống kê đặc biệt
+  &.stat-alive strong {
+    color: #2e7d32; // Xanh lá - còn sống
+  }
+  
+  &.stat-deceased strong {
+    color: #d32f2f; // Đỏ - đã mất
+  }
+  
+  &.stat-male strong {
+    color: #1976d2; // Xanh dương - nam
+  }
+  
+  &.stat-female strong {
+    color: #e91e63; // Hồng - nữ
+  }
+}
+
+// Couple boxes
+.couple {
+  position: absolute;
+  
+  &.hidden {
+    display: none;
+  }
+  
+  .box {
+    min-width: 220px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #fff;
+    border-left: 4px solid transparent;
+    transition: border-color 0.2s ease;
+
+    .box-inner {
+      display: grid;
+      grid-template-columns: 1fr auto; // wives list on left, husband on right
+      gap: 8px 12px;
+      align-items: start;
+    }
+
+    .male-col {
+      grid-column: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end; // husband on the right side
+      gap: 6px;
+    }
+    .wives-list {
+      grid-column: 1;
+      display: flex;
+      flex-direction: column; // vertical stack
+      gap: 6px;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+    .husbands-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+    }
+  }
+}
+
+// Person cards
+.person {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.2;
+  cursor: context-menu;
+  
+  &.male {
+    justify-content: center;
+    
+    .meta {
+      text-align: center;
+    }
+  }
+  
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #f2f2f2;
+    flex-shrink: 0;
+  }
+  
+  .meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  
+  .name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .years {
+    font-size: 12px;
+    color: #666;
+  }
+}
+
+// Old wives-row/husbands-row removed; use wives-list/husbands-list above

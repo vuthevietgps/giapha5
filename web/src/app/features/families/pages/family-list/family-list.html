@@ -1,0 +1,50 @@
+<p>family-list works!</p>
+<mat-toolbar color="primary">
+	<span>Quản lý dòng họ</span>
+	<span style="flex:1 1 auto"></span>
+	<a mat-flat-button color="accent" routerLink="/families/new">
+		<mat-icon>add</mat-icon>
+		Thêm mới
+	</a>
+</mat-toolbar>
+
+<mat-card class="card page-container">
+	<table mat-table [dataSource]="data" class="mat-elevation-z2" style="width: 100%">
+		<ng-container matColumnDef="name">
+			<th mat-header-cell *matHeaderCellDef> Tên dòng họ </th>
+			<td mat-cell *matCellDef="let e"> {{ e.name }} </td>
+		</ng-container>
+
+		<ng-container matColumnDef="contactName">
+			<th mat-header-cell *matHeaderCellDef> Người liên hệ </th>
+			<td mat-cell *matCellDef="let e"> {{ e.contactName }} </td>
+		</ng-container>
+
+		<ng-container matColumnDef="contactPhone">
+			<th mat-header-cell *matHeaderCellDef> SĐT </th>
+			<td mat-cell *matCellDef="let e"> {{ e.contactPhone }} </td>
+		</ng-container>
+
+		<ng-container matColumnDef="address">
+			<th mat-header-cell *matHeaderCellDef> Địa chỉ </th>
+			<td mat-cell *matCellDef="let e"> {{ e.address }} </td>
+		</ng-container>
+
+		<ng-container matColumnDef="actions">
+			<th mat-header-cell *matHeaderCellDef> Hành động </th>
+			<td mat-cell *matCellDef="let e">
+				<a mat-stroked-button color="primary" [routerLink]="['/families', e.id, 'edit']">
+					<mat-icon>edit</mat-icon>
+					Sửa
+				</a>
+				<button mat-stroked-button color="warn" (click)="delete(e.id)">
+					<mat-icon>delete</mat-icon>
+					Xóa
+				</button>
+			</td>
+		</ng-container>
+
+		<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+		<tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+	</table>
+</mat-card>

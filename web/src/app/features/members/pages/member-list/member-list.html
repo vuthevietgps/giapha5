@@ -1,0 +1,69 @@
+<mat-toolbar color="primary">
+  <span>Quản lý thành viên</span>
+  <span style="flex:1 1 auto"></span>
+  <a mat-flat-button color="accent" routerLink="/members/new">
+    <mat-icon>add</mat-icon>
+    Thêm mới
+  </a>
+</mat-toolbar>
+
+<mat-card class="card page-container" style="display:grid; gap:12px;">
+  <div style="display:flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <mat-form-field appearance="outline" style="width: 260px;">
+      <mat-label>Dòng họ</mat-label>
+      <mat-select [formControl]="filters.controls.family">
+        <mat-option [value]="''">Tất cả</mat-option>
+        <mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" style="flex:1 1 260px; min-width: 260px;">
+      <mat-label>Tìm theo tên</mat-label>
+      <input matInput placeholder="Nhập tên thành viên" [formControl]="filters.controls.q" />
+    </mat-form-field>
+  </div>
+
+  <table mat-table [dataSource]="data" class="mat-elevation-z2" style="width: 100%">
+    <ng-container matColumnDef="fullName">
+      <th mat-header-cell *matHeaderCellDef> Họ và Tên </th>
+      <td mat-cell *matCellDef="let e"> {{ e.fullName }} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="family">
+      <th mat-header-cell *matHeaderCellDef> Dòng họ </th>
+      <td mat-cell *matCellDef="let e"> {{ familyName(e.family) }} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="phone">
+      <th mat-header-cell *matHeaderCellDef> SĐT </th>
+      <td mat-cell *matCellDef="let e"> {{ e.phone || '—' }} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="email">
+      <th mat-header-cell *matHeaderCellDef> Email </th>
+      <td mat-cell *matCellDef="let e"> {{ e.email || '—' }} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="position">
+      <th mat-header-cell *matHeaderCellDef> Chức vụ </th>
+      <td mat-cell *matCellDef="let e"> {{ positionName(e.position) }} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef> Hành động </th>
+      <td mat-cell *matCellDef="let e">
+        <a mat-stroked-button color="primary" [routerLink]="['/members', e.id, 'edit']">
+          <mat-icon>edit</mat-icon>
+          Sửa
+        </a>
+        <button mat-stroked-button color="warn" (click)="delete(e.id)">
+          <mat-icon>delete</mat-icon>
+          Xóa
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</mat-card>

@@ -1,0 +1,22 @@
+<h2 mat-dialog-title>Thêm bài viết</h2>
+<div mat-dialog-content>
+  <form [formGroup]="form" class="form">
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Tiêu đề</mat-label>
+      <input matInput formControlName="title" placeholder="Nhập tiêu đề" />
+      <mat-error *ngIf="form.controls.title.hasError('required')">Bắt buộc</mat-error>
+      <mat-error *ngIf="form.controls.title.hasError('maxlength')">Tối đa 200 ký tự</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Nội dung</mat-label>
+      <textarea matInput formControlName="content" rows="10" placeholder="Nhập nội dung bài viết"></textarea>
+      <mat-error *ngIf="form.controls.content.hasError('required')">Bắt buộc</mat-error>
+    </mat-form-field>
+  </form>
+  
+</div>
+<div mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Hủy</button>
+  <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">Lưu</button>
+</div>
