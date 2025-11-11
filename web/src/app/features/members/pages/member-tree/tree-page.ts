@@ -19,6 +19,10 @@ import { UnionService } from '../../services/union';
 import type { Family } from '../../../families/models/family.model';
 import type { Member } from '../../models/member.model';
 import { firstValueFrom } from 'rxjs';
+import { computeStatsFromMembers } from './tree-utils';
+import { buildConnections } from './tree-connections';
+import { buildLevels } from './tree-levels';
+import { resolveFatherForMotherAsync as resolveFatherForMotherAsyncUtil, ensureUnionIfNeeded as ensureUnionIfNeededUtil } from './tree-relations';
 
 @Component({
   selector: 'app-tree-page',
@@ -98,6 +102,14 @@ export class TreePage implements OnInit, AfterViewInit {
   zoom = 1;
   overlayW = 0; overlayH = 0;
   boxScale = 1;
+  // Connection style: 'diagonal' (style 1) or 'hub' (style 2)
+  connectionStyle: 'diagonal' | 'hub' = 'diagonal';
+  setConnectionStyle(style: 'diagonal' | 'hub'){
+    if (this.connectionStyle !== style){
+      this.connectionStyle = style;
+      this.scheduleConnections();
+    }
+  }
   // Panning state
   spaceKey = false; // true khi giữ phím Space
   private panStart = { x: 0, y: 0 };
@@ -108,6 +120,7 @@ export class TreePage implements OnInit, AfterViewInit {
   // Màu nhóm: cha nhiều vợ -> gom theo mẹ; mẹ nhiều chồng -> gom theo cha
   private colorFatherMotherPair = new Map<string,string>(); // key: fatherId|motherId
   private colorMotherFatherPair = new Map<string,string>(); // key: motherId|fatherId
+  private loadToken = 0; // dùng để vô hiệu hóa response cũ khi đổi dòng họ nhanh
 
   @ViewChild('treeAreaRef') treeAreaEl?: ElementRef<HTMLDivElement>;
   @ViewChild('canvasRef') canvasEl?: ElementRef<HTMLDivElement>;
@@ -135,24 +148,34 @@ export class TreePage implements OnInit, AfterViewInit {
   onFamilyChange(){ this.reload(); }
 
   reload(){
-    if (!this.selectedFamilyId){ this.root = null; this.spouses = []; this.levels = []; return; }
+    if (!this.selectedFamilyId){
+      this.root = null; this.spouses = []; this.levels = []; this.connections = []; return;
+    }
+    const token = ++this.loadToken;
+    // Reset trạng thái màu & hôn phối để tránh “rò” giữa các họ
+    this.colorFatherMotherPair.clear();
+    this.colorMotherFatherPair.clear();
+    this.spousesByMember = {};
+    this.spouses = [];
+    this.levels = [];
+    this.connections = [];
     this.membersApi.listByFamily(this.selectedFamilyId).subscribe(members=>{
+      if (token !== this.loadToken) return; // bị thay thế bởi lần reload khác
       this.allMembers = members || [];
-      const previousRootId = this.root?.id;
+      // Chọn root mới (không cố giữ root cũ khác họ)
       let root: Member | null = null;
-      if (previousRootId){ root = members.find(m=> m.id === previousRootId) || null; }
-      if (!root){
-        const candidates = members.filter(m=> m.gender==='male' && !m.father && !m.mother && !m.spouse);
-        if (candidates.length === 1) root = candidates[0];
-        else if (candidates.length > 1){
-          const childCount = (id: string) => members.filter(c=> c.father===id).length;
-          candidates.sort((a,b)=> childCount(b.id!) - childCount(a.id!));
-          root = candidates[0];
-        }
+      const candidates = members.filter(m=> m.gender==='male' && !m.father && !m.mother && !m.spouse);
+      if (candidates.length === 1) root = candidates[0];
+      else if (candidates.length > 1){
+        const childCount = (id: string) => members.filter(c=> c.father===id).length;
+        candidates.sort((a,b)=> childCount(b.id!) - childCount(a.id!));
+        root = candidates[0];
       }
       this.root = root;
-      if (!root){ this.spouses = []; this.levels = []; return; }
+      if (!root){ this.computeStats(); return; }
+      // Sau khi có danh sách unions mới xây spouses & levels để tránh chạy buildLevels hai lần
       this.unionsApi.list({ family: this.selectedFamilyId! }).subscribe(us=>{
+        if (token !== this.loadToken) return;
         const map: Record<string, Set<string>> = {};
         const addPair = (a?: string, b?: string) => {
           if (!a || !b || a === b) return;
@@ -171,19 +194,26 @@ export class TreePage implements OnInit, AfterViewInit {
           this.spousesByMember[mid] = members.filter(m=> set.has(m.id!));
         });
         this.spouses = this.spousesByMember[root.id!] || [];
+        // Gán màu spouse một lần
         this.wifeColor.clear();
         const allPartners = Object.values(this.spousesByMember).flat();
         const seen = new Set<string>();
         allPartners.forEach((p, i)=>{ if (!seen.has(p.id!)) { this.wifeColor.set(p.id!, this.COLORS[i % this.COLORS.length]); seen.add(p.id!); } });
-        this.colorFatherMotherPair.clear();
-        this.colorMotherFatherPair.clear();
+        this.memberById = new Map(members.map(m=> [m.id!, m] as const));
+        this.levels = buildLevels(members, root, this.spousesByMember || {});
+        this.computeStats();
         this.scheduleConnections();
+        // Tự căn giữa gốc khi đổi dòng họ để trải nghiệm nhất quán trên mọi họ
+        setTimeout(()=>{
+          if (this.treeAreaEl){
+            // reset scroll rồi mới căn giữa để tránh lệch
+            this.treeAreaEl.nativeElement.scrollLeft = 0;
+            this.treeAreaEl.nativeElement.scrollTop = 0;
+          }
+          this.centerRoot();
+        }, 60);
       });
-      this.memberById = new Map(members.map(m=> [m.id!, m] as const));
-      this.levels = this.buildLevels(members, root);
-      this.computeStats();
-      this.scheduleConnections();
-    })
+    });
   }
 
   createRoot(){
@@ -310,109 +340,39 @@ export class TreePage implements OnInit, AfterViewInit {
   onResize(){ this.computeConnections(); }
 
   private computeStats(){
-    const ms = this.allMembers || [];
-    const male = ms.filter(m=> (m.gender||'').toLowerCase()==='male').length;
-    const female = ms.filter(m=> (m.gender||'').toLowerCase()==='female').length;
-    const deceased = ms.filter(m=> !!(m as any).dod).length;
-    const alive = ms.length - deceased;
-    const generations = this.root ? (1 + (this.levels?.length || 0)) : 0;
-    this.stats = {
-      totalMembers: ms.length,
-      totalMale: male,
-      totalFemale: female,
-      totalAlive: alive,
-      totalDeceased: deceased,
-      totalGenerations: generations
-    };
+    this.stats = computeStatsFromMembers(this.allMembers || [], this.root, this.levels || []);
   }
 
   computeConnections(){
     const base = (this.canvasEl?.nativeElement || this.treeAreaEl?.nativeElement);
     if (!base) return;
     const baseRect = base.getBoundingClientRect();
-    // Thu thập vị trí anchor thực tế (nút tròn) theo id
-    const anchorById = new Map<string, DOMRect>();
+    const anchorRects = new Map<string, DOMRect>();
     this.anchorEls?.forEach(el => {
       const id = el.nativeElement.getAttribute('data-id') || '';
       if (!id) return;
-      anchorById.set(id, el.nativeElement.getBoundingClientRect());
+      anchorRects.set(id, el.nativeElement.getBoundingClientRect());
     });
-    type Conn = {x1:number;y1:number;x2:number;y2:number;color:string; anchorId?: string};
-    const connsRaw: Conn[] = [];
-    let minX = 0, minY = 0, maxX = 0, maxY = 0;
-    this.childEls?.forEach(el=>{
-      const motherId = el.nativeElement.getAttribute('data-mother') || '';
-      const fatherId = el.nativeElement.getAttribute('data-father') || '';
-      if (!motherId) return;
-      // Anchor chọn: nếu có fatherId và có anchor của father thì dùng; nếu không, ưu tiên mẹ; cuối cùng fallback male spouse đầu tiên.
-      let anchorId: string | undefined = undefined;
-      if (fatherId && anchorById.has(fatherId)) anchorId = fatherId;
-      else if (anchorById.has(motherId)) anchorId = motherId;
-      else {
-        const maleSpouse = (this.spousesByMember[motherId]||[]).find(s=> s.gender==='male');
-        if (maleSpouse && anchorById.has(maleSpouse.id!)) anchorId = maleSpouse.id!;
-      }
-      if (!anchorId) return;
-      const w = anchorById.get(anchorId);
-      if (!w) return;
-      const c = el.nativeElement.getBoundingClientRect();
-      // Tính theo tọa độ tương đối với canvas để đồng bộ với scale transform
-      let x1 = w.left + w.width/2 - baseRect.left;
-      let y1 = w.bottom - baseRect.top; // ngay dưới điểm neo
-      let x2 = c.left + c.width/2 - baseRect.left;
-      let y2 = c.top - baseRect.top;
-      minX = Math.min(minX, x1, x2); maxX = Math.max(maxX, x1, x2);
-      minY = Math.min(minY, y1, y2); maxY = Math.max(maxY, y1, y2);
-      // Color grouping independent of anchor
-      const mother = this.memberById.get(motherId);
-      const father = fatherId ? this.memberById.get(fatherId) : undefined;
-      let color = '#999';
-      if (father && father.gender==='male'){
-        const fatherWives = (this.spousesByMember[father.id!]||[]).filter(s=> s.gender==='female');
-        if (fatherWives.length > 1 && mother){
-          const key = father.id! + '|' + mother.id!;
-          if (!this.colorFatherMotherPair.has(key)){
-            const idx = this.colorFatherMotherPair.size % this.COLORS.length;
-            this.colorFatherMotherPair.set(key, this.COLORS[idx]);
-          }
-          color = this.colorFatherMotherPair.get(key)!;
-        } else if (mother) {
-          const motherHusbands = (this.spousesByMember[mother.id!]||[]).filter(s=> s.gender==='male');
-          if (motherHusbands.length > 1){
-            const key2 = mother.id! + '|' + father.id!;
-            if (!this.colorMotherFatherPair.has(key2)){
-              const idx2 = this.colorMotherFatherPair.size % this.COLORS.length;
-              this.colorMotherFatherPair.set(key2, this.COLORS[idx2]);
-            }
-            color = this.colorMotherFatherPair.get(key2)!;
-          } else {
-            color = '#1976d2';
-          }
-        } else {
-          color = '#1976d2';
-        }
-      } else if (mother){
-        const motherHusbands = (this.spousesByMember[mother.id!]||[]).filter(s=> s.gender==='male');
-        if (motherHusbands.length > 1 && father){
-          const key2 = mother.id! + '|' + father.id!;
-          if (!this.colorMotherFatherPair.has(key2)){
-            const idx2 = this.colorMotherFatherPair.size % this.COLORS.length;
-            this.colorMotherFatherPair.set(key2, this.COLORS[idx2]);
-          }
-          color = this.colorMotherFatherPair.get(key2)!;
-        } else {
-          color = mother.gender==='female' ? '#d81b60' : '#1976d2';
-        }
-      }
-      connsRaw.push({ x1, y1, x2, y2, color, anchorId });
+    const childRects: Array<{ elRect: DOMRect; motherId?: string; fatherId?: string }> = [];
+    this.childEls?.forEach(el => {
+      const motherId = el.nativeElement.getAttribute('data-mother') || undefined;
+      const fatherId = el.nativeElement.getAttribute('data-father') || undefined;
+      childRects.push({ elRect: el.nativeElement.getBoundingClientRect(), motherId, fatherId });
     });
-    // Nếu có tọa độ âm (vượt trái/lên trên viewport), dịch toàn cục về dương để SVG bao hết
-    const offX = minX < 0 ? -minX + 10 : 0;
-    const offY = minY < 0 ? -minY + 10 : 0;
-    const conns: Conn[] = connsRaw.map(c=> ({ ...c, x1: c.x1 + offX, x2: c.x2 + offX, y1: c.y1 + offY, y2: c.y2 + offY }));
-    this.connections = conns;
-  this.overlayW = Math.max(baseRect.width, (maxX - Math.min(0, minX)) + 40);
-  this.overlayH = Math.max(baseRect.height, (maxY - Math.min(0, minY)) + 120);
+    const result = buildConnections({
+      baseRect,
+      anchorRects,
+      childRects,
+      memberById: this.memberById,
+      spousesByMember: this.spousesByMember,
+      style: this.connectionStyle,
+      colors: this.COLORS,
+      colorFatherMotherPair: this.colorFatherMotherPair,
+      colorMotherFatherPair: this.colorMotherFatherPair,
+    });
+    this.connections = result.connections;
+    this.overlayW = result.overlayW;
+    this.overlayH = result.overlayH;
   }
   // Bảo đảm vẽ sau khi DOM thực sự có các phần tử (QueryList cập nhật). Dùng double rAF tránh cần thao tác phóng to mới xuất hiện.
   private scheduleConnections(){
@@ -424,120 +384,32 @@ export class TreePage implements OnInit, AfterViewInit {
     if (!m) return '#999';
     return m.gender==='female' ? '#d81b60' : '#1976d2';
   }
-  private buildLevels(members: Member[], root: Member): Member[][]{
-    const byId = new Map(members.map(m=>[m.id!, m] as const));
-    const levels: Member[][] = [];
-    const visited = new Set<string>();
-    const getFemaleSpouses = (m: Member) => (this.spousesByMember[m.id!]||[]).filter(s=>s.gender==='female');
-    const sortByDobDesc = (arr: Member[]) => arr.sort((a,b)=>{
-      const da = a.dob ? new Date(a.dob as any).getTime() : 0;
-      const db = b.dob ? new Date(b.dob as any).getTime() : 0;
-      return db - da; // lớn hơn (mới hơn) ở bên trái
-    });
-    // Gen2: children of root (by father OR mother is a wife of root)
-    const rootWives = getFemaleSpouses(root).map(w=>w.id!);
-    let current: Member[] = members.filter(m=> m.father===root.id || (m.mother && rootWives.includes(m.mother)));
-    // Sắp xếp các con của một bố (cụ tổ) theo DOB giảm dần
-    sortByDobDesc(current);
-    current.forEach(c=> visited.add(c.id!));
-    if (current.length) levels.push(current);
-    // Next gens: derive by mothers that are either the female in the couple (if current member is female) or any female spouse of current member
-    while (current.length){
-      const nextOrdered: Member[] = [];
-      // Duyệt theo thứ tự bố (cặp) ở level hiện tại để giữ cụm con của từng bố liền nhau
-      for (const p of current){
-        const mothers: string[] = [];
-        if (p.gender==='female' && p.id) mothers.push(p.id);
-        for (const w of getFemaleSpouses(p)) mothers.push(w.id!);
-        for (const mid of mothers){
-          const kids = members.filter(m=> m.mother===mid && !visited.has(m.id!));
-          if (kids.length){
-            sortByDobDesc(kids); // sắp xếp con của cùng một bố theo DOB giảm dần
-            kids.forEach(k=>{ visited.add(k.id!); nextOrdered.push(k); });
-          }
-        }
-      }
-      const next = nextOrdered;
-      next.forEach(n=> visited.add(n.id!));
-      if (!next.length) break;
-      levels.push(next);
-      current = next;
-    }
-    return levels;
-  }
+  // buildLevels moved to tree-levels.ts
   private async resolveFatherForMotherAsync(mother: Member): Promise<Member | null> {
-    const partners = this.spousesByMember[mother.id!] || [];
-    const males = partners.filter(p => p.gender === 'male');
-    if (males.length === 1) return males[0];
-    if (males.length > 1){
-      // Nếu đã có lựa chọn cha ưa thích cho mẹ này và vẫn còn hợp lệ thì dùng luôn
-      const cachedId = this.preferredFatherByMother[mother.id!];
-      const cached = cachedId ? males.find(m => m.id === cachedId) : undefined;
-      if (cached) return cached;
-      // Mở dialog chọn cha (bắt buộc). Nếu hủy: ném lỗi để caller dừng lại.
-      const ref = this.dialog.open(TreeSelectFatherDialog, { data: { mother, fathers: males }, width: '420px' });
-      const picked = await firstValueFrom(ref.afterClosed());
-      if (picked) { this.preferredFatherByMother[mother.id!] = picked.id!; return picked; }
-      throw new Error('cancelled');
-    }
-    // fallback: nếu mẹ là vợ của root nam thì dùng root làm cha
-    if (this.root && this.root.gender === 'male'){
-      const rootPartners = this.spousesByMember[this.root.id!] || [];
-      if (rootPartners.find(p=> p.id === mother.id)) return this.root;
-    }
-    return null;
-  }
-  // Đảm bảo tồn tại union nếu cả cha và mẹ đều có trước khi tạo con
-  private async ensureUnionIfNeeded(motherId?: string, fatherId?: string): Promise<void>{
-    if (!motherId || !fatherId) return; // chỉ cần khi đủ cả hai
-    try {
-      const unions = await firstValueFrom(this.unionsApi.list({ family: this.selectedFamilyId!, partner: motherId }));
-      const exists = unions?.some(u => (u.partners||[]).includes(motherId) && (u.partners||[]).includes(fatherId));
-      if (exists) return;
-      await firstValueFrom(this.unionsApi.create({ family: this.selectedFamilyId!, partners: [motherId, fatherId] }));
-    } catch (e){ /* ignore, sẽ fail ở bước create con nếu có vấn đề khác */ }
-  }
-  deleteNode(node: Member | null){
-    if (!node) return;
-    this.ctx.visible = false;
-    if (this.root && node.id === this.root.id){
-      this.snack.open('Không thể xóa cụ tổ', 'Đóng', { duration: 2000 });
-      return;
-    }
-    const ok = confirm(`Xóa "${node.fullName}"? Hành động này không thể hoàn tác.`);
-    if (!ok) return;
-    this.membersApi.delete(node.id!).subscribe({
-      next: ()=>{ this.snack.open('Đã xóa', 'Đóng', { duration: 1500 }); this.reload(); },
-      error: (err: any)=>{
-        const msg = err?.error?.message || 'Xóa thất bại';
-        this.snack.open(msg, 'Đóng', { duration: 2500 });
+    return await resolveFatherForMotherAsyncUtil(mother, {
+      spousesByMember: this.spousesByMember,
+      root: this.root,
+      preferredFatherByMother: this.preferredFatherByMother,
+      openFatherDialog: async (mom, fathers) => {
+        const ref = this.dialog.open(TreeSelectFatherDialog, { data: { mother: mom, fathers }, width: '420px' });
+        return await firstValueFrom(ref.afterClosed());
       }
+    });
+  }
+
+  private async ensureUnionIfNeeded(motherId?: string, fatherId?: string): Promise<void>{
+    return ensureUnionIfNeededUtil(motherId, fatherId, {
+      listUnions: async (partnerId: string) => await firstValueFrom(this.unionsApi.list({ family: this.selectedFamilyId!, partner: partnerId })),
+      createUnion: async (mid: string, fid: string) => { await firstValueFrom(this.unionsApi.create({ family: this.selectedFamilyId!, partners: [mid, fid] })); }
     })
-  }
-  onWheel(ev: WheelEvent){
-    if (ev.ctrlKey){
-      ev.preventDefault();
-      const delta = -ev.deltaY; // wheel up => zoom in
-      const factor = delta > 0 ? 1.05 : 0.95;
-      let next = this.zoom * factor;
-      if (next < 0.3) next = 0.3; if (next > 2.5) next = 2.5;
-      this.zoom = parseFloat(next.toFixed(2));
-      // Recompute to reposition lines based on new scale if needed (SVG scales with container)
-      setTimeout(()=> this.computeConnections());
-    }
-  }
-  onScaleChange(){
-    setTimeout(()=> this.computeConnections(), 50);
-  }
-  genderColor(g?: string){ return (g==='male') ? '#1976d2' : (g==='female' ? '#d81b60' : '#888'); }
-  // Panning handlers
-  @HostListener('window:keydown', ['$event'])
-  handleKeyDown(ev: KeyboardEvent){
-    if (ev.code === 'Space' && !this.spaceKey){ this.spaceKey = true; ev.preventDefault(); }
   }
   @HostListener('window:keyup', ['$event'])
   handleKeyUp(ev: KeyboardEvent){
     if (ev.code === 'Space'){ this.spaceKey = false; this.isPanning = false; }
+  }
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(ev: KeyboardEvent){
+    if (ev.code === 'Space'){ this.spaceKey = true; ev.preventDefault(); }
   }
   onMouseDown(ev: MouseEvent){
     if (!this.spaceKey || !this.treeAreaEl) return;
@@ -555,6 +427,37 @@ export class TreePage implements OnInit, AfterViewInit {
   }
   onMouseUp(){
     this.isPanning = false;
+  }
+  onWheel(ev: WheelEvent){
+    // Ctrl + wheel to zoom, otherwise let default scroll happen
+    if (ev.ctrlKey){
+      ev.preventDefault();
+      const delta = -Math.sign(ev.deltaY) * 0.1; // wheel up -> zoom in
+      const newZoom = Math.min(2, Math.max(0.5, this.zoom + delta));
+      if (newZoom !== this.zoom){
+        this.zoom = newZoom;
+        this.scheduleConnections();
+      }
+    }
+  }
+  onScaleChange(){
+    // Clamp and recompute connections since box sizes changed
+    if (this.boxScale < 0.6) this.boxScale = 0.6;
+    if (this.boxScale > 2.5) this.boxScale = 2.5;
+    this.scheduleConnections();
+  }
+  genderColor(gender?: string){
+    return (gender||'').toLowerCase() === 'female' ? '#d81b60' : '#1976d2';
+  }
+  deleteNode(node: Member | null){
+    if (!node) return;
+    this.ctx.visible = false;
+    const ok = confirm(`Xóa ${node.fullName}? Hành động không thể hoàn tác.`);
+    if (!ok) return;
+    this.membersApi.delete(node.id!).subscribe({
+      next: ()=>{ this.snack.open('Đã xóa', 'Đóng', { duration: 1500 }); this.reload(); },
+      error: (e)=> this.snack.open(e?.error?.message || 'Xóa thất bại', 'Đóng', { duration: 2000 })
+    });
   }
   centerRoot(){
     if (!this.root || !this.husbandEl || !this.treeAreaEl) return;

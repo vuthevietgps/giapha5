@@ -1,3 +1,29 @@
+import type { Member } from '../../models/member.model';
+
+export interface TreeStats {
+  totalMembers: number;
+  totalMale: number;
+  totalFemale: number;
+  totalAlive: number;
+  totalDeceased: number;
+  totalGenerations: number;
+}
+
+export function computeStatsFromMembers(members: Member[], root: Member | null, levels: Member[][]): TreeStats {
+  const male = members.filter(m=> (m.gender||'').toLowerCase()==='male').length;
+  const female = members.filter(m=> (m.gender||'').toLowerCase()==='female').length;
+  const deceased = members.filter(m=> !!(m as any).dod).length;
+  const alive = members.length - deceased;
+  const generations = root ? (1 + (levels?.length || 0)) : 0;
+  return {
+    totalMembers: members.length,
+    totalMale: male,
+    totalFemale: female,
+    totalAlive: alive,
+    totalDeceased: deceased,
+    totalGenerations: generations
+  };
+}
 // Tree utility functions - REAL layout + connection preparation
 // NOTE: Members passed in should have shape Member { id, father?, mother?, spouse?, dob?, gender? }
 // Couples are synthesized so that each (male + primary wife) occupy one box; singles appear alone.
