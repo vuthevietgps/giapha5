@@ -31,7 +31,7 @@ export interface EditMemberData { member: Member; }
     <h2 mat-dialog-title>Sửa thông tin</h2>
     <div mat-dialog-content [formGroup]="form" class="form-grid">
       <div class="photo">
-        <img [src]="previewUrl || data.member.photoUrl || 'assets/avatar-male.svg'" alt="avatar" />
+        <img [src]="previewUrl || data.member.photoUrl || (data.member.gender==='female' ? 'assets/avatar-female.svg' : 'assets/avatar-male.svg')" alt="avatar" />
         <input type="file" (change)="onFile($event)" />
       </div>
       <div class="fields">
@@ -124,7 +124,19 @@ export class TreeEditMemberDialog {
     reader.onload = () => this.previewUrl = reader.result as string;
     reader.readAsDataURL(file);
     // upload immediately
-    this.membersApi.uploadPhoto(this.data.member.id!, file).subscribe({});
+    this.membersApi.uploadPhoto(this.data.member.id!, file).subscribe({
+      next: (res) => {
+        if (res?.success && res.url){
+          // switch to server URL so it works outside of the dialog too
+          this.data.member.photoUrl = res.url;
+          // If preview is set, we can keep it or clear to show server URL; prefer server URL
+          this.previewUrl = null;
+        }
+      },
+      error: _ => {
+        // keep the preview if upload fails; no-op
+      }
+    });
   }
 
   save(){

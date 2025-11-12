@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, AfterViewInit, ElementRef, ViewChild, ViewChildren, QueryList, HostListener } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,6 +11,8 @@ import { FormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { RouterModule } from '@angular/router';
 import { TreeEditMemberDialog } from './tree-edit-member.dialog';
 import { TreeAddPartnerDialog } from './tree-add-partner.dialog';
 import { TreeSelectFatherDialog } from './tree-select-father.dialog';
@@ -23,6 +26,7 @@ import { computeStatsFromMembers } from './tree-utils';
 import { buildConnections } from './tree-connections';
 import { buildLevels } from './tree-levels';
 import { resolveFatherForMotherAsync as resolveFatherForMotherAsyncUtil, ensureUnionIfNeeded as ensureUnionIfNeededUtil } from './tree-relations';
+import { collectSubtree } from './tree-focus';
 
 @Component({
   selector: 'app-tree-page',
@@ -37,8 +41,10 @@ import { resolveFatherForMotherAsync as resolveFatherForMotherAsyncUtil, ensureU
     MatMenuModule,
     MatSnackBarModule,
     MatDialogModule,
+    MatSlideToggleModule,
     FormsModule,
     MatInputModule,
+    RouterModule,
   // TreeSelectFatherDialog is opened dynamically (not declared in template)
   TreeSelectFatherDialog,
   ],
@@ -85,11 +91,14 @@ export class TreePage implements OnInit, AfterViewInit {
   private readonly unionsApi = inject(UnionService);
   private readonly snack = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   families: Family[] = [];
   selectedFamilyId: string | null = null;
 
   root: Member | null = null;
+  originalRoot: Member | null = null;
   spouses: Member[] = [];
   levels: Member[][] = [];
   allMembers: Member[] = [];
@@ -121,6 +130,9 @@ export class TreePage implements OnInit, AfterViewInit {
   private colorFatherMotherPair = new Map<string,string>(); // key: fatherId|motherId
   private colorMotherFatherPair = new Map<string,string>(); // key: motherId|fatherId
   private loadToken = 0; // dùng để vô hiệu hóa response cũ khi đổi dòng họ nhanh
+  // Focus subtree state
+  focusRootId: string | null = null;
+  includeSpousesInFocus = true;
 
   @ViewChild('treeAreaRef') treeAreaEl?: ElementRef<HTMLDivElement>;
   @ViewChild('canvasRef') canvasEl?: ElementRef<HTMLDivElement>;
@@ -136,6 +148,15 @@ export class TreePage implements OnInit, AfterViewInit {
   };
 
   ngOnInit(){
+    // Đọc query params focus & spouses
+    this.route.queryParamMap.subscribe(qp => {
+      const focus = qp.get('focus');
+      const spouses = qp.get('spouses');
+      this.focusRootId = focus || null;
+      this.includeSpousesInFocus = spouses !== '0';
+      // Khi thay đổi params mà đã có dữ liệu thì chỉ reload filter
+      if (this.allMembers.length) this.reload();
+    });
     this.familiesApi.list().subscribe(f=>{
       this.families = f;
       if (f.length && !this.selectedFamilyId){
@@ -193,14 +214,34 @@ export class TreePage implements OnInit, AfterViewInit {
           const set = map[mid];
           this.spousesByMember[mid] = members.filter(m=> set.has(m.id!));
         });
-        this.spouses = this.spousesByMember[root.id!] || [];
-        // Gán màu spouse một lần
+        // Tạo map màu vợ/chồng toàn cục trước (sẽ lọc sau nếu focus)
         this.wifeColor.clear();
-        const allPartners = Object.values(this.spousesByMember).flat();
-        const seen = new Set<string>();
-        allPartners.forEach((p, i)=>{ if (!seen.has(p.id!)) { this.wifeColor.set(p.id!, this.COLORS[i % this.COLORS.length]); seen.add(p.id!); } });
+        const allPartnersGlobal = Object.values(this.spousesByMember).flat();
+        const seenGlobal = new Set<string>();
+        allPartnersGlobal.forEach((p, i)=>{ if (!seenGlobal.has(p.id!)) { this.wifeColor.set(p.id!, this.COLORS[i % this.COLORS.length]); seenGlobal.add(p.id!); } });
         this.memberById = new Map(members.map(m=> [m.id!, m] as const));
-        this.levels = buildLevels(members, root, this.spousesByMember || {});
+
+        let renderMembers = members;
+        let renderRoot = root;
+        let spousesMap = this.spousesByMember;
+        if (this.focusRootId){
+          const { visibleIds, root: focusRoot } = collectSubtree(members, this.focusRootId, this.spousesByMember, { includeSpouses: this.includeSpousesInFocus });
+          renderMembers = members.filter(m => visibleIds.has(m.id!));
+          renderRoot = focusRoot || root;
+          // Lọc lại spousesByMember chỉ giữ các partners nằm trong visibleIds để template không hiển thị anchor dư
+          const filtered: Record<string, Member[]> = {};
+          Object.keys(this.spousesByMember).forEach(mid => {
+            if (!visibleIds.has(mid)) return;
+            filtered[mid] = (this.spousesByMember[mid]||[]).filter(p => visibleIds.has(p.id!));
+          });
+            spousesMap = filtered;
+        }
+        this.spousesByMember = spousesMap;
+        this.root = renderRoot;
+        // Cập nhật danh sách spouses hiển thị ở hộp gốc (lọc theo visible set)
+        this.spouses = (spousesMap[renderRoot!.id!] || []);
+        this.levels = buildLevels(renderMembers, renderRoot!, spousesMap || {});
+        this.allMembers = renderMembers; // stats theo nhánh nếu đang focus
         this.computeStats();
         this.scheduleConnections();
         // Tự căn giữa gốc khi đổi dòng họ để trải nghiệm nhất quán trên mọi họ
@@ -230,6 +271,30 @@ export class TreePage implements OnInit, AfterViewInit {
   openContextMenu(ev: MouseEvent, node: Member){
     ev.preventDefault();
     this.ctx = { visible: true, x: ev.clientX, y: ev.clientY, node };
+  }
+
+  // Focus subtree API
+  enterFocus(node: Member){
+    if (!node?.id) return;
+    this.focusRootId = node.id;
+    this.updateFocusParams();
+    this.reload();
+  }
+  exitFocus(){
+    this.focusRootId = null;
+    this.updateFocusParams();
+    this.reload();
+  }
+  toggleIncludeSpouses(val: boolean){
+    this.includeSpousesInFocus = val;
+    this.updateFocusParams();
+    if (this.focusRootId){ this.reload(); }
+  }
+  private updateFocusParams(){
+    const params: any = {};
+    if (this.focusRootId) params.focus = this.focusRootId; else params.focus = null;
+    params.spouses = this.includeSpousesInFocus ? '1' : '0';
+    this.router.navigate([], { queryParams: params, queryParamsHandling: 'merge' });
   }
 
   editInfo(node: Member | null){

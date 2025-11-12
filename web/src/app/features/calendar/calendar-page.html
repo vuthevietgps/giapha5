@@ -1,0 +1,52 @@
+<div class="shell">
+  <div class="left">
+    <div class="header">
+      <mat-form-field appearance="outline" style="min-width: 220px;">
+        <mat-label>Dòng họ</mat-label>
+        <mat-select [(value)]="selectedFamilyId" (selectionChange)="onFamilyChange()">
+          <mat-option *ngFor="let f of families" [value]="f.id">{{f.name}}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-stroked-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
+      <div class="sticky">
+        <strong>Tháng {{monthDate.getMonth()+1}} năm {{monthDate.getFullYear()}}</strong>
+      </div>
+      <button mat-stroked-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
+      <button mat-button (click)="today()">Hôm nay</button>
+    </div>
+
+    <div class="grid">
+      <div class="cell" *ngFor="let c of days" (click)="selectDay(c.day)">
+        <div class="d">{{c.day}} <span style="font-weight:400;opacity:.7;font-size:11px">(Âm {{c.lunarDay}})</span></div>
+        <div *ngIf="c.birthdays.length" class="badge bday">Sinh nhật: {{c.birthdays.length}}</div>
+        <div *ngIf="c.deathdays.length" class="badge dday">Giỗ: {{c.deathdays.length}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <mat-card *ngIf="selectedDay as d">
+      <mat-card-title>
+        Ngày {{d}} tháng {{monthDate.getMonth()+1}} năm {{monthDate.getFullYear()}}
+        <div style="font-size:12px;opacity:.8">(Âm: ngày {{days[d-1]?.lunarDay}})</div>
+      </mat-card-title>
+      <mat-card-content>
+        <div>
+          <h4>Sinh nhật</h4>
+          <div *ngFor="let m of days[d-1]?.birthdays">
+            • {{m.fullName}} ({{m.dob | date:'dd/MM'}})
+          </div>
+          <div *ngIf="!days[d-1]?.birthdays?.length" style="opacity:.7">Không có</div>
+        </div>
+        <div style="margin-top:12px;">
+          <h4>Ngày giỗ</h4>
+          <div *ngFor="let m of days[d-1]?.deathdays">
+            • {{m.fullName}} ({{m.dod | date:'dd/MM'}})
+          </div>
+          <div *ngIf="!days[d-1]?.deathdays?.length" style="opacity:.7">Không có</div>
+        </div>
+        
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

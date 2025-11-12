@@ -145,16 +145,22 @@ export class MembersService {
     if (!familyIdForRefChecks) throw new NotFoundException('Không tìm thấy thành viên');
     await this.ensureSameFamily(familyIdForRefChecks, cleanDto.father, cleanDto.spouse, cleanDto.mother);
 
-    // Prevent cycles: father cannot be a descendant of this member
-    if (cleanDto.father) {
+    // Determine which relationship fields are being changed in this update
+    const affectsGender = Object.prototype.hasOwnProperty.call(cleanDto, 'gender');
+    const affectsFather = Object.prototype.hasOwnProperty.call(cleanDto, 'father');
+    const affectsMother = Object.prototype.hasOwnProperty.call(cleanDto, 'mother');
+    const affectsSpouse = Object.prototype.hasOwnProperty.call(cleanDto, 'spouse');
+
+    // Prevent cycles only when those fields are actually being set/changed
+    if (affectsFather && cleanDto.father) {
       const isCycle = await this.isDescendant(cleanDto.father, id);
       if (isCycle) throw new BadRequestException('Thiết lập Bố tạo vòng lặp');
       if (cleanDto.father === id) throw new BadRequestException('Bố không thể là chính mình');
     }
-    if (cleanDto.spouse) {
+    if (affectsSpouse && cleanDto.spouse) {
       if (cleanDto.spouse === id) throw new BadRequestException('Vợ/Chồng không thể là chính mình');
     }
-    if (cleanDto.mother) {
+    if (affectsMother && cleanDto.mother) {
       if (cleanDto.mother === id) throw new BadRequestException('Mẹ không thể là chính mình');
       // Basic cycle prevention leveraging father-chain: prevent setting mother to a descendant by father lineage
       const cycle = await this.isDescendant(cleanDto.mother, id);
@@ -162,25 +168,30 @@ export class MembersService {
     }
 
     // Business rule: Only one male without parents (root male) per family
-    const current = await this.memberModel.findById(id).select('family gender father mother').lean().exec();
+    const current = await this.memberModel.findById(id).select('family gender father mother spouse').lean().exec();
     const newGender = cleanDto.gender ?? (current?.gender ?? 'male');
     const newFather = cleanDto.father ?? current?.father?.toString();
     const newMother = cleanDto.mother ?? (current as any)?.mother?.toString();
-    if (newGender === 'male' && !newFather && !newMother && !cleanDto.spouse && !(current as any)?.spouse) {
-      const existingRootMale = await this.memberModel.exists({
-        _id: { $ne: id },
-        $or: [ { family: this.toObjectId(familyIdForRefChecks) }, { family: familyIdForRefChecks } ],
-        gender: 'male',
-        father: { $exists: false },
-        mother: { $exists: false },
-      });
-      if (existingRootMale) {
-        throw new BadRequestException('Mỗi dòng họ chỉ có một cụ tổ (nam) không có cha mẹ');
+    const newSpouse = cleanDto.spouse ?? (current as any)?.spouse?.toString();
+    // Only enforce the unique-root-male rule when relevant fields are being changed
+    if ((affectsGender || affectsFather || affectsMother || affectsSpouse)) {
+      if (newGender === 'male' && !newFather && !newMother && !newSpouse) {
+        const existingRootMale = await this.memberModel.exists({
+          _id: { $ne: id },
+          $or: [ { family: this.toObjectId(familyIdForRefChecks) }, { family: familyIdForRefChecks } ],
+          gender: 'male',
+          father: { $exists: false },
+          mother: { $exists: false },
+        });
+        if (existingRootMale) {
+          throw new BadRequestException('Mỗi dòng họ chỉ có một cụ tổ (nam) không có cha mẹ');
+        }
       }
     }
 
     // If both father and mother provided (after merging with existing), ensure a union exists
-    if (newFather && newMother) {
+    // Only validate union existence when parent relationships are being changed
+    if ((affectsFather || affectsMother) && newFather && newMother) {
       const union = await this.unionModel.findOne({
         $or: [ { family: this.toObjectId(familyIdForRefChecks) }, { family: familyIdForRefChecks } ],
         partners: { $all: [ this.toObjectId(newFather), this.toObjectId(newMother) ] },
@@ -198,8 +209,8 @@ export class MembersService {
   const before = await this.memberModel.findById(id).lean().exec();
   const updated = await this.memberModel.findByIdAndUpdate(id, payload, { new: true }).exec();
       if (!updated) throw new NotFoundException('Không tìm thấy thành viên');
-      // Maintain spouse symmetry
-      if (cleanDto.spouse !== undefined) {
+      // Maintain spouse symmetry when spouse is explicitly changed
+      if (affectsSpouse) {
         // Clear previous spouse links
         await this.memberModel.updateMany({ spouse: id, _id: { $ne: cleanDto.spouse } }, { $unset: { spouse: 1 } }).exec();
         if (cleanDto.spouse) {

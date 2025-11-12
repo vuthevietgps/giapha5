@@ -10,6 +10,7 @@ import { MemberForm } from './features/members/pages/member-form/member-form';
 import { TreePage } from './features/members/pages/member-tree/tree-page';
 import { PostList } from './features/posts/pages/post-list/post-list';
 import { PostDetail } from './features/posts/pages/post-detail/post-detail';
+import { CalendarPage } from './features/calendar/calendar-page';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'users' },
@@ -28,4 +29,5 @@ export const routes: Routes = [
 	{ path: 'posts', component: PostList, title: 'Bài viết' },
 	{ path: 'posts/:id', component: PostDetail, title: 'Bài viết' },
 	{ path: 'members/tree', component: TreePage, title: 'Cây gia phả' },
+	{ path: 'calendar', component: CalendarPage, title: 'Lịch vạn niên' },
 ];

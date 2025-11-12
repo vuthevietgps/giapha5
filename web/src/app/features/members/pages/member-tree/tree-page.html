@@ -17,6 +17,13 @@
         <div class="stat-item"><span>Đã mất:</span><strong>{{stats.totalDeceased}}</strong></div>
       </div>
       <span class="spacer"></span>
+      <ng-container *ngIf="focusRootId">
+        <span style="padding:4px 8px;border:1px solid #ccc;border-radius:14px;margin-right:8px;display:inline-flex;align-items:center;gap:8px;">
+          Đang xem nhánh
+          <button mat-stroked-button color="primary" (click)="exitFocus()">Thoát</button>
+        </span>
+        <mat-slide-toggle [checked]="includeSpousesInFocus" (change)="toggleIncludeSpouses($event.checked)" style="margin-right:8px;">Hiển thị vợ/chồng</mat-slide-toggle>
+      </ng-container>
       <mat-form-field appearance="outline" style="width:140px; margin-right:8px;">
         <mat-label>Kiểu</mat-label>
         <mat-select [value]="connectionStyle" (selectionChange)="setConnectionStyle($event.value)">
@@ -85,5 +92,6 @@
   <button mat-button (click)="editInfo(ctx.node)">Sửa thông tin</button>
   <button mat-button (click)="addWife(ctx.node)">Thêm hôn phối</button>
   <button mat-button (click)="addChild(ctx.node)" *ngIf="ctx.node?.gender==='female'">Thêm con</button>
+  <button mat-button (click)="enterFocus(ctx.node!)">Xem nhánh này</button>
   <button mat-button color="warn" (click)="deleteNode(ctx.node)">Xóa</button>
 </div>
