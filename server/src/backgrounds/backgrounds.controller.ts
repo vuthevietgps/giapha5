@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UploadedFile, UseInterceptors, Res, Body } from '@nestjs/common';
+import { Controller, Get, Param, Post, UploadedFile, UseInterceptors, Res, Body, Delete } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { Response } from 'express';
@@ -49,5 +49,10 @@ export class BackgroundsController {
     }
     res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
     res.sendFile(fp);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string){
+    return this.service.remove(id);
   }
 }

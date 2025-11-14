@@ -35,11 +35,15 @@
         <mat-label>Kích cỡ</mat-label>
         <input matInput type="number" min="0.6" step="0.1" [(ngModel)]="boxScale" (input)="onScaleChange()" />
       </mat-form-field>
+      <button mat-stroked-button (click)="openBackgrounds()"><mat-icon>image</mat-icon> Ảnh nền</button>
       <button mat-stroked-button (click)="computeConnections()">Vẽ đường nối</button>
       <button mat-stroked-button (click)="centerRoot()">Canh giữa</button>
       <button mat-button (click)="reload()"><mat-icon>refresh</mat-icon> Tải lại</button>
     </div>
-    <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()">
+    <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()"
+      [style.background-image]="backgroundUrl ? 'url(' + backgroundUrl + ')' : 'none'"
+      style="background-size: contain; background-repeat: no-repeat; background-position: center top;"
+    >
       <div class="canvas" #canvasRef [style.transform]="'scale(' + zoom + ')'" [style.fontSize.px]="12*boxScale" style="transform-origin: 0 0; position: relative; display:inline-block;">
         <svg class="connections" *ngIf="connections.length" [attr.width]="overlayW" [attr.height]="overlayH">
           <line *ngFor="let c of connections" [attr.x1]="c.x1" [attr.y1]="c.y1" [attr.x2]="c.x2" [attr.y2]="c.y2" [attr.stroke]="c.color" stroke-width="2" />

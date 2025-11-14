@@ -24,4 +24,8 @@ export class BackgroundService {
   fileUrl(id: string): string {
     return `${this.baseUrl}/${id}/file`;
   }
+
+  remove(id: string): Observable<{ success: boolean }>{
+    return this.http.delete<{ success: boolean }>(`${this.baseUrl}/${id}`);
+  }
 }

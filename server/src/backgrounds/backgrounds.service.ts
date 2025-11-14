@@ -46,6 +46,14 @@ export class BackgroundsService {
   getFilePath(fileName: string): string {
     return path.join(UPLOAD_DIR, fileName);
   }
+
+  async remove(id: string): Promise<{ success: true }>{
+    const doc = await this.findOne(id);
+    const filePath = this.getFilePath(doc.fileName);
+    await this.model.findByIdAndDelete(id).exec();
+    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
+    return { success: true };
+  }
 }
 
 export { UPLOAD_DIR };

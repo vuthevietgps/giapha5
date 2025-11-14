@@ -16,6 +16,8 @@ import { RouterModule } from '@angular/router';
 import { TreeEditMemberDialog } from './tree-edit-member.dialog';
 import { TreeAddPartnerDialog } from './tree-add-partner.dialog';
 import { TreeSelectFatherDialog } from './tree-select-father.dialog';
+import { TreeBackgroundsDialog } from './tree-backgrounds.dialog';
+import { BackgroundService } from '../../../backgrounds/services/background';
 import { FamilyService } from '../../../families/services/family';
 import { MemberService } from '../../services/member';
 import { UnionService } from '../../services/union';
@@ -89,6 +91,7 @@ export class TreePage implements OnInit, AfterViewInit {
   private readonly familiesApi = inject(FamilyService);
   private readonly membersApi = inject(MemberService);
   private readonly unionsApi = inject(UnionService);
+  private readonly backgroundsApi = inject(BackgroundService);
   private readonly snack = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
@@ -133,6 +136,9 @@ export class TreePage implements OnInit, AfterViewInit {
   // Focus subtree state
   focusRootId: string | null = null;
   includeSpousesInFocus = true;
+  // Background management
+  selectedBackgroundId: string | null = null;
+  backgroundUrl: string | null = null;
 
   @ViewChild('treeAreaRef') treeAreaEl?: ElementRef<HTMLDivElement>;
   @ViewChild('canvasRef') canvasEl?: ElementRef<HTMLDivElement>;
@@ -161,6 +167,7 @@ export class TreePage implements OnInit, AfterViewInit {
       this.families = f;
       if (f.length && !this.selectedFamilyId){
         this.selectedFamilyId = f[0].id || null;
+        this.loadBackgroundChoice();
         this.reload();
       }
     })
@@ -172,6 +179,7 @@ export class TreePage implements OnInit, AfterViewInit {
     if (!this.selectedFamilyId){
       this.root = null; this.spouses = []; this.levels = []; this.connections = []; return;
     }
+    this.loadBackgroundChoice();
     const token = ++this.loadToken;
     // Reset trạng thái màu & hôn phối để tránh “rò” giữa các họ
     this.colorFatherMotherPair.clear();
@@ -254,6 +262,26 @@ export class TreePage implements OnInit, AfterViewInit {
           this.centerRoot();
         }, 60);
       });
+    });
+  }
+
+  private loadBackgroundChoice(){
+    if (!this.selectedFamilyId) { this.selectedBackgroundId = null; this.backgroundUrl = null; return; }
+    const key = `bg:${this.selectedFamilyId}`;
+    const id = localStorage.getItem(key);
+    this.selectedBackgroundId = id;
+    this.backgroundUrl = id ? this.backgroundsApi.fileUrl(id) : null;
+  }
+  openBackgrounds(){
+    const ref = this.dialog.open(TreeBackgroundsDialog, { data: { selectedId: this.selectedBackgroundId }, width: '820px' });
+    ref.afterClosed().subscribe((id: string | null | undefined) => {
+      if (id === undefined) return; // closed without changes
+      this.selectedBackgroundId = id || null;
+      const key = this.selectedFamilyId ? `bg:${this.selectedFamilyId}` : null;
+      if (key){
+        if (id) localStorage.setItem(key, id); else localStorage.removeItem(key);
+      }
+      this.backgroundUrl = id ? this.backgroundsApi.fileUrl(id) : null;
     });
   }
 
