@@ -60,16 +60,17 @@ import { collectSubtree } from './tree-focus';
   .tree-area{position:relative;flex:1;overflow:auto;padding:8px}
   .tree-area.space-pan{cursor:grab}
   .tree-area.space-pan.panning{cursor:grabbing}
+  .center-wrap{min-width:100%;min-height:100%;display:grid;justify-content:center;align-content:flex-start}
   .tree-content{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:100%}
   .connections{position:absolute;left:0;top:0;pointer-events:none;z-index:999}
-    .node{border:1px solid #ccc;border-radius:8px;padding:8px 12px;background:#fff;min-width:160px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-  .couple-box{display:inline-grid;grid-template-rows:auto auto;row-gap:6px;justify-items:center;border:2px solid #1976d2;border-radius:10px;padding:10px 12px 12px;background:#fff;position:relative;z-index:2;width:fit-content;max-width:none;box-shadow:0 2px 4px rgba(0,0,0,.06);overflow:hidden;transition:border-color .15s}
-  /* Màu giới tính chỉ còn một vạch dọc bên trái trong mỗi khối person */
-  .person{margin:0 auto 2px;text-align:center;padding:4px 10px 4px 12px;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:auto;position:relative;background:#f5f8fa}
+    .node{border:1px solid #ccc;border-radius:8px;padding:8px 12px;background:transparent;min-width:160px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .couple-box{display:inline-grid;grid-template-rows:auto auto;row-gap:6px;justify-items:center;border:2px solid #1976d2;border-radius:10px;padding:10px 12px 12px;background:transparent;position:relative;z-index:2;width:fit-content;max-width:none;box-shadow:0 2px 4px rgba(0,0,0,.06);overflow:hidden;transition:border-color .15s}
+  /* Nền trong suốt; giữ vạch màu giới tính ở cạnh trái */
+  .person{margin:0 auto 2px;text-align:center;padding:4px 10px 4px 12px;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:auto;position:relative;background:transparent}
   .person:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:6px 0 0 6px;background:#1976d2}
   .person.female:before{background:#d81b60}
-  .person.male{background:#e7f2fc}
-  .person.female{background:#fde7f1}
+  .person.male{background:transparent}
+  .person.female{background:transparent}
   .child-couple.couple-box{padding:6px 10px}
   .wives-list{display:flex;gap:6px;flex-wrap:nowrap;justify-content:center;align-items:flex-end}
     .wives-list .person{position:relative;padding-bottom:18px}
@@ -139,6 +140,10 @@ export class TreePage implements OnInit, AfterViewInit {
   // Background management
   selectedBackgroundId: string | null = null;
   backgroundUrl: string | null = null;
+  backgroundFit: 'contain' | 'cover' = 'contain';
+  // Top padding (px) to lower the tree to match background artwork
+  // Increased default from 120 -> 160 to align better with decorative header in backgrounds.
+  topOffset = 160;
 
   @ViewChild('treeAreaRef') treeAreaEl?: ElementRef<HTMLDivElement>;
   @ViewChild('canvasRef') canvasEl?: ElementRef<HTMLDivElement>;
@@ -266,11 +271,17 @@ export class TreePage implements OnInit, AfterViewInit {
   }
 
   private loadBackgroundChoice(){
-    if (!this.selectedFamilyId) { this.selectedBackgroundId = null; this.backgroundUrl = null; return; }
+    if (!this.selectedFamilyId) { this.selectedBackgroundId = null; this.backgroundUrl = null; this.topOffset = 160; return; }
     const key = `bg:${this.selectedFamilyId}`;
+    const offKey = `bgOff:${this.selectedFamilyId}`;
+    const fitKey = `bgFit:${this.selectedFamilyId}`;
     const id = localStorage.getItem(key);
+    const offRaw = localStorage.getItem(offKey);
+    const fit = (localStorage.getItem(fitKey) as ('contain'|'cover'|null)) || 'contain';
     this.selectedBackgroundId = id;
     this.backgroundUrl = id ? this.backgroundsApi.fileUrl(id) : null;
+    this.topOffset = offRaw ? Math.max(0, parseInt(offRaw, 10) || 0) : 160;
+    this.backgroundFit = fit === 'cover' ? 'cover' : 'contain';
   }
   openBackgrounds(){
     const ref = this.dialog.open(TreeBackgroundsDialog, { data: { selectedId: this.selectedBackgroundId }, width: '820px' });
@@ -278,11 +289,28 @@ export class TreePage implements OnInit, AfterViewInit {
       if (id === undefined) return; // closed without changes
       this.selectedBackgroundId = id || null;
       const key = this.selectedFamilyId ? `bg:${this.selectedFamilyId}` : null;
+      const offKey = this.selectedFamilyId ? `bgOff:${this.selectedFamilyId}` : null;
       if (key){
         if (id) localStorage.setItem(key, id); else localStorage.removeItem(key);
       }
       this.backgroundUrl = id ? this.backgroundsApi.fileUrl(id) : null;
+      // Persist current offset alongside background selection
+      if (offKey) localStorage.setItem(offKey, String(this.topOffset));
     });
+  }
+
+  onTopOffsetChange(){
+    // Persist per family to keep alignment with chosen background
+    if (!this.selectedFamilyId) return;
+    const offKey = `bgOff:${this.selectedFamilyId}`;
+    localStorage.setItem(offKey, String(this.topOffset));
+  }
+
+  onBackgroundFitChange(fit: 'contain'|'cover'){
+    this.backgroundFit = fit;
+    if (!this.selectedFamilyId) return;
+    const fitKey = `bgFit:${this.selectedFamilyId}`;
+    localStorage.setItem(fitKey, fit);
   }
 
   createRoot(){
@@ -477,6 +505,7 @@ export class TreePage implements OnInit, AfterViewInit {
     if (!m) return '#999';
     return m.gender==='female' ? '#d81b60' : '#1976d2';
   }
+  
   // buildLevels moved to tree-levels.ts
   private async resolveFatherForMotherAsync(mother: Member): Promise<Member | null> {
     return await resolveFatherForMotherAsyncUtil(mother, {

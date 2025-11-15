@@ -35,6 +35,17 @@
         <mat-label>Kích cỡ</mat-label>
         <input matInput type="number" min="0.6" step="0.1" [(ngModel)]="boxScale" (input)="onScaleChange()" />
       </mat-form-field>
+      <mat-form-field appearance="outline" style="width:120px; margin-left:8px;">
+        <mat-label>Lề trên</mat-label>
+        <input matInput type="number" min="0" step="10" [(ngModel)]="topOffset" (input)="onTopOffsetChange()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" style="width:140px; margin-left:8px;">
+        <mat-label>Khớp nền</mat-label>
+        <mat-select [value]="backgroundFit" (selectionChange)="onBackgroundFitChange($event.value)">
+          <mat-option value="contain">Hiển thị hết</mat-option>
+          <mat-option value="cover">Phủ kín</mat-option>
+        </mat-select>
+      </mat-form-field>
       <button mat-stroked-button (click)="openBackgrounds()"><mat-icon>image</mat-icon> Ảnh nền</button>
       <button mat-stroked-button (click)="computeConnections()">Vẽ đường nối</button>
       <button mat-stroked-button (click)="centerRoot()">Canh giữa</button>
@@ -42,15 +53,18 @@
     </div>
     <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()"
       [style.background-image]="backgroundUrl ? 'url(' + backgroundUrl + ')' : 'none'"
-      style="background-size: contain; background-repeat: no-repeat; background-position: center top;"
+      [style.paddingTop.px]="topOffset"
+      [style.background-size]="backgroundFit"
+      style="background-repeat: no-repeat; background-position: center top;"
     >
-      <div class="canvas" #canvasRef [style.transform]="'scale(' + zoom + ')'" [style.fontSize.px]="12*boxScale" style="transform-origin: 0 0; position: relative; display:inline-block;">
-        <svg class="connections" *ngIf="connections.length" [attr.width]="overlayW" [attr.height]="overlayH">
-          <line *ngFor="let c of connections" [attr.x1]="c.x1" [attr.y1]="c.y1" [attr.x2]="c.x2" [attr.y2]="c.y2" [attr.stroke]="c.color" stroke-width="2" />
-        </svg>
-        <ng-container *ngIf="root; else empty">
-          <div class="tree-content">
-            <div class="couple-box" [ngStyle]="{'border-color': genderColor(root.gender)}">
+      <div class="center-wrap">
+        <div class="canvas" #canvasRef [style.transform]="'scale(' + zoom + ')'" [style.fontSize.px]="12*boxScale" style="transform-origin: 0 0; position: relative; display:inline-block;">
+          <svg class="connections" *ngIf="connections.length" [attr.width]="overlayW" [attr.height]="overlayH">
+            <line *ngFor="let c of connections" [attr.x1]="c.x1" [attr.y1]="c.y1" [attr.x2]="c.x2" [attr.y2]="c.y2" [attr.stroke]="c.color" stroke-width="2" />
+          </svg>
+          <ng-container *ngIf="root; else empty">
+            <div class="tree-content">
+              <div class="couple-box" [ngStyle]="{'border-color': genderColor(root.gender)}">
               <div #husbandEl class="person male" (contextmenu)="openContextMenu($event, root)">
                 <div class="name">{{root.fullName}}</div>
                 <div class="meta">{{root.dob | date:'yyyy-MM-dd'}}</div>
@@ -62,8 +76,8 @@
                   <div class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Thêm con" (click)="quickAddChild(s)"></div>
                 </div>
               </div>
-            </div>
-            <div class="children" *ngFor="let level of levels; let li = index">
+              </div>
+              <div class="children" *ngFor="let level of levels; let li = index">
               <div class="child-couple couple-box" *ngFor="let c of level" #childBox [ngStyle]="{'border-color': genderColor(c.gender)}">
                 <div class="person child-person" [class.male]="c.gender==='male'" [class.female]="c.gender==='female'" #childEl [attr.data-id]="c.id" [attr.data-mother]="c.mother" [attr.data-father]="c.father" (contextmenu)="openContextMenu($event, c)">
                   <div class="name">{{c.fullName}}</div>
@@ -77,18 +91,17 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
-          </div>
-        </ng-container>
+          </ng-container>
+        </div>
       </div>
       <ng-template #empty>
         <div class="empty">Chưa có đời đầu. Bấm "Tạo đời đầu" để bắt đầu.</div>
       </ng-template>
     </div>
   </div>
-  <div class="right">
-    <!-- Chỗ trống cho về sau: legend, bộ lọc, etc. -->
-  </div>
+  
 </div>
 
 <!-- Context menu primitive -->

@@ -1,0 +1,17 @@
+<div class="shell">
+  <div class="toolbar">
+    <button mat-stroked-button color="primary" (click)="fileInput.click()"><mat-icon>upload</mat-icon> Tải ảnh lên</button>
+    <input type="file" accept="image/*" #fileInput hidden (change)="onFile($event)">
+    <span style="opacity:.7">Quản lý ảnh nền dùng cho Cây gia phả.</span>
+  </div>
+
+  <div class="grid">
+    <div class="item" *ngFor="let it of items">
+      <img [src]="fileUrl(it)" alt="bg">
+      <div class="name">{{it.name}}</div>
+      <div class="actions">
+        <button mat-icon-button color="warn" (click)="remove(it)"><mat-icon>delete</mat-icon></button>
+      </div>
+    </div>
+  </div>
+</div>

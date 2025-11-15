@@ -11,6 +11,9 @@ import { TreePage } from './features/members/pages/member-tree/tree-page';
 import { PostList } from './features/posts/pages/post-list/post-list';
 import { PostDetail } from './features/posts/pages/post-detail/post-detail';
 import { CalendarPage } from './features/calendar/calendar-page';
+import { BranchPage } from './features/members/pages/member-branch/branch-page';
+import { BranchCalendarPage } from './features/members/pages/member-branch/branch-calendar-page';
+import { BackgroundsPage } from './features/backgrounds/pages/backgrounds-page';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'users' },
@@ -29,5 +32,8 @@ export const routes: Routes = [
 	{ path: 'posts', component: PostList, title: 'Bài viết' },
 	{ path: 'posts/:id', component: PostDetail, title: 'Bài viết' },
 	{ path: 'members/tree', component: TreePage, title: 'Cây gia phả' },
+	{ path: 'members/branch', component: BranchPage, title: 'Nhánh quan tâm' },
+	{ path: 'members/branch-calendar', component: BranchCalendarPage, title: 'Lịch quan trọng (nhánh)' },
 	{ path: 'calendar', component: CalendarPage, title: 'Lịch vạn niên' },
+	{ path: 'backgrounds', component: BackgroundsPage, title: 'Ảnh nền' },
 ];
