@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gia Pha Online</string>
+    <string name="title_activity_main">Gia Pha Online</string>
+    <string name="package_name">com.vutheviet.giapha</string>
+    <string name="custom_url_scheme">com.vutheviet.giapha</string>
+</resources>
