@@ -1,8 +1,13 @@
-<mat-sidenav-container class="app-shell" style="height: 100vh;">
-	<mat-sidenav mode="side" opened style="width: 260px;">
-		<div style="display:flex; align-items:center; gap:8px; padding: 16px;">
-			<mat-icon>account_tree</mat-icon>
-			<strong>Gia Phả Online version1</strong>
+<mat-sidenav-container class="app-shell" style="height: 100vh;" [autosize]="true">
+	<mat-sidenav mode="side" opened [class.collapsed]="collapsed" [style.width.px]="collapsed ? 64 : 260" class="app-sidenav">
+		<div class="brand">
+			<div class="brand-left">
+				<mat-icon>account_tree</mat-icon>
+				<strong class="brand-title">Gia Phả Online version1</strong>
+			</div>
+			<button mat-icon-button aria-label="Thu gọn sidebar" (click)="toggleSidebar()" class="collapse-btn" title="Thu gọn/mở rộng">
+				<mat-icon>{{ collapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left' }}</mat-icon>
+			</button>
 		</div>
 		<mat-nav-list>
 			<a mat-list-item routerLink="/users" routerLinkActive="active">
@@ -50,7 +55,7 @@
 		</mat-nav-list>
 	</mat-sidenav>
 
-	<mat-sidenav-content>
+	<mat-sidenav-content [style.marginLeft.px]="(collapsed ? 64 : 260)">
 		<router-outlet />
 	</mat-sidenav-content>
 </mat-sidenav-container>

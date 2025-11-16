@@ -527,10 +527,20 @@ export class TreePage implements OnInit, AfterViewInit {
   }
   @HostListener('window:keyup', ['$event'])
   handleKeyUp(ev: KeyboardEvent){
+    const target = ev.target as HTMLElement | null;
+    const tag = (target?.tagName || '').toLowerCase();
+    const isTyping = tag === 'input' || tag === 'textarea' || (!!(target as any)?.isContentEditable);
+    const inDialog = !!(target?.closest('.cdk-overlay-pane') || target?.closest('mat-dialog-container'));
+    if (isTyping || inDialog) return; // đừng can thiệp khi đang gõ trong input/dialog
     if (ev.code === 'Space'){ this.spaceKey = false; this.isPanning = false; }
   }
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(ev: KeyboardEvent){
+    const target = ev.target as HTMLElement | null;
+    const tag = (target?.tagName || '').toLowerCase();
+    const isTyping = tag === 'input' || tag === 'textarea' || (!!(target as any)?.isContentEditable);
+    const inDialog = !!(target?.closest('.cdk-overlay-pane') || target?.closest('mat-dialog-container'));
+    if (isTyping || inDialog) return; // cho phép gõ phím cách trong form/dialog
     if (ev.code === 'Space'){ this.spaceKey = true; ev.preventDefault(); }
   }
   onMouseDown(ev: MouseEvent){

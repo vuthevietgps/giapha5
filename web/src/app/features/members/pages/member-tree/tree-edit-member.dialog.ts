@@ -64,7 +64,7 @@ export interface EditMemberData { member: Member; }
           <input matInput type="email" formControlName="email" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Địa chỉ</mat-label>
+          <mat-label>Tiểu sử</mat-label>
           <textarea matInput rows="3" formControlName="bio"></textarea>
         </mat-form-field>
       </div>
@@ -144,7 +144,7 @@ export class TreeEditMemberDialog {
     this.saving = true;
     const v = this.form.value;
     const payload: Partial<Member> = {
-      fullName: v.fullName || '',
+      fullName: (v.fullName || '').replace(/\s+/g, ' ').trim(),
       gender: v.gender as any,
       dob: v.dob || undefined,
       dod: v.dod || undefined,

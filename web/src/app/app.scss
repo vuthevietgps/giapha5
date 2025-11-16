@@ -1,0 +1,18 @@
+.app-sidenav{ transition: width .15s ease-in-out; overflow: hidden; }
+.app-sidenav.collapsed {
+	width: 64px !important;
+}
+.app-sidenav .brand{ 
+	display:flex; align-items:center; justify-content:space-between; gap:8px; padding: 12px 8px 12px 16px;
+	position: sticky; top: 0; z-index: 2; border-bottom: 1px solid #eee; background: var(--mdc-theme-surface, #fff);
+}
+.app-sidenav .brand .brand-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.app-sidenav.collapsed .brand .brand-title{ display:none; }
+.app-sidenav .collapse-btn{ margin-left: 4px; }
+
+/* Hide titles when collapsed, keep only icons */
+.app-sidenav.collapsed mat-nav-list a span[matListItemTitle]{ display:none; }
+.app-sidenav.collapsed mat-nav-list a .mdc-list-item__content{ padding-left: 0; }
+.app-sidenav mat-nav-list a .mdc-list-item__start{ margin-right: 12px; }
+.app-sidenav.collapsed mat-nav-list a { justify-content: center; }
+

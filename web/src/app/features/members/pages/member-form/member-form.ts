@@ -163,6 +163,10 @@ export class MemberForm implements OnInit {
       return;
     }
     const value = this.form.value as Member;
+    // Chuẩn hóa họ tên: gộp nhiều khoảng trắng thành 1 và bỏ khoảng trắng đầu/cuối
+    if (value?.fullName != null) {
+      (value as any).fullName = String(value.fullName).replace(/\s+/g, ' ').trim();
+    }
     const action$ = this.id
       ? this.memberService.update(this.id, value)
       : this.memberService.create(value);

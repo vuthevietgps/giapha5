@@ -25,4 +25,11 @@ import { MatButtonModule } from '@angular/material/button';
 })
 export class App {
   protected readonly title = signal('web');
+
+  collapsed = (localStorage.getItem('sidebarCollapsed') === '1');
+
+  toggleSidebar(){
+    this.collapsed = !this.collapsed;
+    localStorage.setItem('sidebarCollapsed', this.collapsed ? '1' : '0');
+  }
 }
