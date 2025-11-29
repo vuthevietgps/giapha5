@@ -1,61 +1,298 @@
-<mat-sidenav-container class="app-shell" style="height: 100vh;" [autosize]="true">
-	<mat-sidenav mode="side" opened [fixedInViewport]="true" [class.collapsed]="collapsed" [style.width.px]="collapsed ? 64 : 260" class="app-sidenav">
+<ng-container *ngIf="(currentUser$ | async); else landing">
+	<mat-sidenav-container class="app-shell" style="height: 100vh;" [autosize]="true">
+		<mat-sidenav 
+			#drawer
+			[mode]="sidenavMode" 
+			[opened]="sidenavOpened" 
+			[fixedInViewport]="true" 
+			[class.collapsed]="collapsed && !isMobile" 
+			[style.width.px]="isMobile ? 260 : (collapsed ? 64 : 260)" 
+			class="app-sidenav">
+			
 		<div class="brand">
-			<div class="brand-left">
+			<div class="brand-left" style="display:flex; align-items:center; gap:8px;">
 				<mat-icon>account_tree</mat-icon>
-				<strong class="brand-title">Gia Phả Online version1</strong>
+				<strong class="brand-title">Gia Phả Online version2.0</strong>
 			</div>
-			<button mat-icon-button aria-label="Thu gọn sidebar" (click)="toggleSidebar()" class="collapse-btn" title="Thu gọn/mở rộng">
-				<mat-icon>{{ collapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left' }}</mat-icon>
-			</button>
-		</div>
-		<mat-nav-list>
-			<a mat-list-item routerLink="/users" routerLinkActive="active">
-				<mat-icon matListItemIcon>group</mat-icon>
-				<span matListItemTitle>Người dùng</span>
-			</a>
-			<a mat-list-item routerLink="/families" routerLinkActive="active">
-				<mat-icon matListItemIcon>diversity_3</mat-icon>
-				<span matListItemTitle>Dòng họ</span>
-			</a>
-			<a mat-list-item routerLink="/positions" routerLinkActive="active">
-				<mat-icon matListItemIcon>badge</mat-icon>
-				<span matListItemTitle>Chức vụ</span>
-			</a>
-			<a mat-list-item routerLink="/members" routerLinkActive="active">
-				<mat-icon matListItemIcon>person</mat-icon>
-				<span matListItemTitle>Thành viên</span>
-			</a>
-			<a mat-list-item routerLink="/members/tree" routerLinkActive="active">
-				<mat-icon matListItemIcon>account_tree</mat-icon>
-				<span matListItemTitle>Cây gia phả</span>
-			</a>
-			<a mat-list-item routerLink="/members/branch" routerLinkActive="active">
-				<mat-icon matListItemIcon>format_list_bulleted</mat-icon>
-				<span matListItemTitle>Nhánh quan tâm</span>
-			</a>
-			<a mat-list-item routerLink="/backgrounds" routerLinkActive="active">
-				<mat-icon matListItemIcon>image</mat-icon>
-				<span matListItemTitle>Ảnh nền</span>
-			</a>
-			<a mat-list-item routerLink="/calendar" routerLinkActive="active">
-				<mat-icon matListItemIcon>calendar_month</mat-icon>
-				<span matListItemTitle>Lịch vạn niên</span>
-			</a>
-			<a mat-list-item routerLink="/members/branch-calendar" routerLinkActive="active">
-				<mat-icon matListItemIcon>event</mat-icon>
-				<span matListItemTitle>Lịch quan trọng</span>
-			</a>
-			<a mat-list-item routerLink="/posts" routerLinkActive="active">
-				<mat-icon matListItemIcon>article</mat-icon>
-				<span matListItemTitle>Bài viết</span>
-			</a>
-			<!-- Member tree menu -->
-			<!-- Có thể thêm các menu khác sau này -->
-		</mat-nav-list>
-	</mat-sidenav>
+			<div class="brand-actions" style="display:flex; align-items:center; gap:6px;">
+				<!-- Close button for mobile -->
+				<button *ngIf="isMobile" mat-icon-button (click)="drawer.close()" class="mobile-close-btn">
+					<mat-icon>close</mat-icon>
+					</button>
+					<!-- Collapse button for desktop -->
+					<button *ngIf="!isMobile" mat-icon-button aria-label="Thu gọn sidebar" (click)="toggleSidebar()" class="collapse-btn" title="Thu gọn/mở rộng">
+						<span style="font-size: 18px; font-weight: bold;">{{ collapsed ? '>>' : '<<' }}</span>
+					</button>
+				</div>
+			</div>
+			
+			<mat-nav-list>
+				<a mat-list-item routerLink="/users" routerLinkActive="active" *ngIf="hasPermission('users.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>group</mat-icon>
+					<span matListItemTitle>Người dùng</span>
+				</a>
+				<a mat-list-item routerLink="/families" routerLinkActive="active" *ngIf="hasPermission('families.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>diversity_3</mat-icon>
+					<span matListItemTitle>Dòng họ</span>
+				</a>
+				<a mat-list-item routerLink="/positions" routerLinkActive="active" *ngIf="hasPermission('positions.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>badge</mat-icon>
+					<span matListItemTitle>Chức vụ</span>
+				</a>
+				<a mat-list-item routerLink="/members" routerLinkActive="active" *ngIf="hasPermission('members.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>person</mat-icon>
+					<span matListItemTitle>Thành viên</span>
+				</a>
+				<a mat-list-item routerLink="/members/tree" routerLinkActive="active" *ngIf="hasPermission('tree.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>account_tree</mat-icon>
+					<span matListItemTitle>Cây gia phả</span>
+				</a>
+				<a mat-list-item routerLink="/members/branch" routerLinkActive="active" *ngIf="hasPermission('branches.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>format_list_bulleted</mat-icon>
+					<span matListItemTitle>Nhánh quan tâm</span>
+				</a>
+				<a mat-list-item routerLink="/backgrounds" routerLinkActive="active" *ngIf="hasPermission('backgrounds.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>image</mat-icon>
+					<span matListItemTitle>Ảnh nền</span>
+				</a>
+				<a mat-list-item routerLink="/calendar" routerLinkActive="active" *ngIf="hasPermission('calendar.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>calendar_month</mat-icon>
+					<span matListItemTitle>Lịch vạn niên</span>
+				</a>
+				<a mat-list-item routerLink="/members/branch-calendar" routerLinkActive="active" *ngIf="hasPermission('calendar.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>event</mat-icon>
+					<span matListItemTitle>Lịch quan trọng</span>
+				</a>
+				<a mat-list-item routerLink="/posts" routerLinkActive="active" *ngIf="hasPermission('posts.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>article</mat-icon>
+					<span matListItemTitle>Bài viết</span>
+				</a>
 
-	<mat-sidenav-content [style.marginLeft.px]="(collapsed ? 64 : 260)">
-		<router-outlet />
-	</mat-sidenav-content>
-</mat-sidenav-container>
+				<!-- System Management - SUPER_ADMIN only -->
+				<mat-divider *ngIf="hasPermission('users.view') || hasPermission('families.create') || hasPermission('payment.create') || hasPermission('reports.view')"></mat-divider>
+				
+				<a mat-list-item routerLink="/users" routerLinkActive="active" *ngIf="hasPermission('users.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>supervisor_account</mat-icon>
+					<span matListItemTitle>Quản lý Người dùng</span>
+				</a>
+				
+				<a mat-list-item routerLink="/pricing" routerLinkActive="active" *ngIf="hasPermission('payment.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>payments</mat-icon>
+					<span matListItemTitle>Báo giá & Thanh toán</span>
+				</a>
+				
+				<a mat-list-item routerLink="/reports" routerLinkActive="active" *ngIf="hasPermission('reports.view')" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>analytics</mat-icon>
+					<span matListItemTitle>Báo cáo Tổng hợp</span>
+				</a>
+
+				<mat-divider></mat-divider>
+
+				<a mat-list-item routerLink="/notifications" routerLinkActive="active" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>notifications</mat-icon>
+					<span matListItemTitle>Cài đặt Thông báo</span>
+				</a>
+
+				<a mat-list-item routerLink="/mobile-setup" routerLinkActive="active" (click)="closeSidebarOnMobile()">
+					<mat-icon matListItemIcon>smartphone</mat-icon>
+					<span matListItemTitle>Cài đặt cho điện thoại</span>
+				</a>
+			</mat-nav-list>
+			
+			<!-- Logout button at bottom -->
+			<div class="sidebar-footer">
+				<button mat-list-item (click)="logout(); closeSidebarOnMobile()" class="logout-btn">
+					<mat-icon matListItemIcon>logout</mat-icon>
+					<span matListItemTitle>Đăng xuất</span>
+				</button>
+			</div>
+		</mat-sidenav>
+
+		<mat-sidenav-content [style.marginLeft.px]="isMobile ? 0 : (collapsed ? 64 : 260)">
+			<!-- Mobile toolbar with hamburger menu -->
+			<mat-toolbar *ngIf="isMobile" color="primary" style="position: sticky; top: 0; z-index: 999;">
+				<button mat-icon-button (click)="toggleSidebar()" class="mobile-menu-btn">
+					<mat-icon>menu</mat-icon>
+				</button>
+				<span>Gia Phả Online</span>
+			</mat-toolbar>
+
+			<!-- Floating expand button when sidebar is collapsed (desktop only) -->
+			<button *ngIf="collapsed && !isMobile" mat-fab color="primary" class="floating-expand-btn" (click)="toggleSidebar()" title="Mở rộng sidebar">
+				<span style="font-size: 18px; font-weight: bold;">>></span>
+			</button>
+			
+			<router-outlet />
+		</mat-sidenav-content>
+	</mat-sidenav-container>
+</ng-container>
+
+<ng-template #landing>
+	<div class="landing-page">
+		<mat-toolbar color="primary" class="landing-toolbar">
+			<div class="landing-brand">
+				<mat-icon>account_tree</mat-icon>
+				<strong>Gia Phả Online</strong>
+			</div>
+			<span class="toolbar-spacer"></span>
+			<button mat-stroked-button color="accent" (click)="openLogin()">
+				<mat-icon>login</mat-icon>
+				<span>Đăng nhập</span>
+			</button>
+		</mat-toolbar>
+		<main class="landing-main">
+			<section class="hero">
+				<div class="hero-content">
+					<span class="hero-badge">
+						<mat-icon>verified</mat-icon>
+						Nền tảng quản trị gia phả 24/7
+					</span>
+					<h1 class="hero-title">Không bao giờ quên lịch giỗ, sinh nhật của tổ tiên và người thân</h1>
+					<p class="hero-subtitle">Gia Phả Online tự động nhắc nhở tất cả ngày giỗ chạp, sinh nhật của mọi thành viên trong dòng họ. Không còn lo lắng quên những ngày quan trọng nhất.</p>
+					<ul class="hero-benefits">
+						<li>
+							<mat-icon>account_tree</mat-icon>
+							<span>Vẽ cây gia phả trực quan, xuất file in PDF với đầy đủ thông tin dòng họ</span>
+						</li>
+						<li>
+							<mat-icon>library_books</mat-icon>
+							<span>Lưu trữ tiểu sử chi tiết của tổ tiên, người thân với hình ảnh và câu chuyện</span>
+						</li>
+						<li>
+							<mat-icon>notifications_active</mat-icon>
+							<span>Thông báo tự động ngày sinh nhật, ngày giỗ của tổ tiên và người thân</span>
+						</li>
+						<li>
+							<mat-icon>calendar_today</mat-icon>
+							<span>Lịch vạn niên thông báo ngày tốt xấu, chọn ngày cúng bái, cưới hỏi</span>
+						</li>
+					</ul>
+					<div class="hero-actions">
+						<button mat-flat-button color="primary" (click)="openLogin()">Đăng nhập quản trị</button>
+						<a mat-stroked-button color="primary" routerLink="/mobile-setup">Ứng dụng di động</a>
+						<a mat-stroked-button color="accent" class="contact-link" href="tel:0363614511">
+							<mat-icon>call</mat-icon>
+							<span>0363 614 511</span>
+						</a>
+					</div>
+					<div class="hero-support">
+						<mat-icon>support_agent</mat-icon>
+						<span>Hỗ trợ nhanh qua Zalo: <a href="https://zalo.me/0363614511" target="_blank" rel="noopener">0363614511</a></span>
+					</div>
+				</div>
+				<div class="hero-media">
+					<div class="mockup-card">
+						<h3>Tính năng toàn diện cho dòng họ</h3>
+						<ul>
+							<li>
+								<mat-icon>print</mat-icon>
+								<span>Xuất cây gia phả thành file PDF để in ấn, chia sẻ hoặc treo tường</span>
+							</li>
+							<li>
+								<mat-icon>photo_library</mat-icon>
+								<span>Upload ảnh, ghi chú tiểu sử, nghề nghiệp, thành tích của từng người</span>
+							</li>
+							<li>
+								<mat-icon>star</mat-icon>
+								<span>Xem ngày tốt xấu theo lịch vạn niên để chọn ngày cúng, làm việc</span>
+							</li>
+							<li>
+								<mat-icon>notifications</mat-icon>
+								<span>Nhận thông báo tự động trước mọi ngày quan trọng của gia đình</span>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+
+			<section class="section light">
+				<h2 class="section-title">Giải pháp quản lý gia phả toàn diện cho mọi dòng họ</h2>
+				<p class="section-description">Từ vẽ cây gia phả, lưu trữ tiểu sử tổ tiên đến thông báo tự động và tra cứu lịch vạn niên - tất cả trong một hệ thống dễ sử dụng.</p>
+				<div class="feature-grid">
+					<div class="feature-card">
+						<mat-icon>device_hub</mat-icon>
+						<h3>Vẽ cây gia phả & xuất file in</h3>
+						<p>Tạo sơ đồ cây gia phả trực quan với đầy đủ thông tin. Xuất PDF chất lượng cao để in ấn, làm quà tặng hoặc treo trang trí.</p>
+					</div>
+					<div class="feature-card">
+						<mat-icon>person_pin</mat-icon>
+						<h3>Lưu trữ tiểu sử tổ tiên</h3>
+						<p>Ghi lại câu chuyện đời, nghề nghiệp, thành tích của tổ tiên và người thân. Kèm ảnh, tài liệu lịch sử quý giá.</p>
+					</div>
+					<div class="feature-card">
+						<mat-icon>campaign</mat-icon>
+						<h3>Thông báo ngày quan trọng</h3>
+						<p>Tự động nhắc nhở sinh nhật, ngày giỗ của tổ tiên và người thân. Gửi thông báo trước 15-7-3-1 ngày qua nhiều kênh.</p>
+					</div>
+					<div class="feature-card">
+						<mat-icon>calendar_view_month</mat-icon>
+						<h3>Lịch vạn niên ngày tốt xấu</h3>
+						<p>Tra cứu ngày tốt xấu theo lịch âm truyền thống. Chọn ngày tốt để cúng bái, cưới hỏi, khởi công, mở cửa hàng.</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="section alt">
+				<div class="stats-grid">
+					<div class="stat-card">
+						<span class="stat-number">2.000+</span>
+						<span class="stat-label">Cây gia phả đã được vẽ và xuất file PDF cho các dòng họ trên toàn quốc</span>
+					</div>
+					<div class="stat-card">
+						<span class="stat-number">15.000+</span>
+						<span class="stat-label">Tiểu sử tổ tiên và người thân đã được lưu trữ với ảnh và câu chuyện</span>
+					</div>
+					<div class="stat-card">
+						<span class="stat-number">365</span>
+						<span class="stat-label">Ngày trong năm có lịch vạn niên tra cứu ngày tốt xấu chính xác</span>
+					</div>
+				</div>
+			</section>
+
+			<section class="section light">
+				<h2 class="section-title">Triển khai nhanh trong 3 bước</h2>
+				<div class="steps-grid">
+					<div class="step-card">
+						<span class="step-number">1</span>
+						<h3>Tư vấn & demo</h3>
+						<p>Gọi ngay 0363614511 để được demo và tư vấn mô hình quản lý phù hợp với dòng họ của bạn.</p>
+					</div>
+					<div class="step-card">
+						<span class="step-number">2</span>
+						<h3>Thiết lập dữ liệu</h3>
+						<p>Nhập dữ liệu tổ tiên, phân cấp nhánh họ, thiết lập lịch và quyền truy cập cho từng vai trò.</p>
+					</div>
+					<div class="step-card">
+						<span class="step-number">3</span>
+						<h3>Khởi chạy toàn dòng họ</h3>
+						<p>Chia sẻ ứng dụng cho thành viên, theo dõi sự kiện, báo cáo đầy đủ ngay trong ngày.</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="section cta">
+				<div class="cta-card">
+					<h2>Bắt đầu nhận thông báo lịch giỗ, sinh nhật ngay hôm nay</h2>
+					<p>Chúng tôi sẽ nhập sẵn toàn bộ thông tin tổ tiên, thiết lập lịch nhắc nhở và hướng dẫn sử dụng miễn phí. Chỉ cần 1-2 giờ là xong!</p>
+					<div class="cta-actions">
+						<a mat-flat-button color="accent" href="tel:0363614511">
+							<mat-icon>call</mat-icon>
+							<span>Gọi 0363 614 511</span>
+						</a>
+						<a mat-stroked-button color="primary" href="https://zalo.me/0363614511" target="_blank" rel="noopener">
+							<mat-icon>chat</mat-icon>
+							<span>Chat Zalo</span>
+						</a>
+						<button mat-stroked-button color="primary" (click)="openLogin()">
+							<mat-icon>login</mat-icon>
+							<span>Đăng nhập quản trị</span>
+						</button>
+					</div>
+				</div>
+			</section>
+		</main>
+		<footer class="landing-footer">
+			<span>Gia Phả Online &copy; {{ currentYear }} &middot; Hỗ trợ: <a href="tel:0363614511">0363614511</a> &middot; Zalo: <a href="https://zalo.me/0363614511" target="_blank" rel="noopener">0363614511</a></span>
+		</footer>
+	</div>
+</ng-template>

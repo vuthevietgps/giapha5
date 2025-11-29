@@ -1,0 +1,244 @@
+﻿<mat-card class="card page-container" style="max-width: 1000px;">
+  <h2 style="margin-top: 0; display:flex; align-items:center; gap:8px;">
+    <mat-icon>smartphone</mat-icon> Cài đặt cho điện thoại
+  </h2>
+
+  <mat-tab-group>
+    <!-- Android Tab -->
+    <mat-tab label="Android">
+      <div class="tab-content" style="padding: 20px 0;">
+        <div style="display:grid; gap:16px;">
+          <section>
+            <h3 style="margin:0 0 8px;">
+              <mat-icon style="vertical-align: middle; color: #3DDC84;">android</mat-icon>
+              Tải về và cài đặt Android
+            </h3>
+            <p>Nhấn nút dưới đây để tải file APK rồi cài đặt trên điện thoại Android.</p>
+            <a mat-flat-button color="primary" [href]="apkUrl" download>
+              <mat-icon>download</mat-icon>
+              <span style="margin-left:6px;">Tải ứng dụng Android (APK)</span>
+            </a>
+            <p style="color:#666; margin-top:8px; font-size: 14px;">
+              Liên kết tải: <a [href]="apkUrl">{{ apkUrl }}</a>
+            </p>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section>
+            <h3 style="margin:0 0 8px;">Hướng dẫn cài đặt</h3>
+            <ol style="padding-left: 20px; margin: 0; line-height: 1.8;">
+              <li>Tải file APK về máy (nhấn nút ở trên).</li>
+              <li>Mở file APK và chọn <strong>Cài đặt</strong>.</li>
+              <li>Nếu có cảnh báo "Nguồn không xác định/Unknown sources":
+                <ul>
+                  <li>Vào <strong>Cài đặt</strong> → <strong>Bảo mật</strong></li>
+                  <li>Bật <strong>"Cho phép cài đặt từ nguồn không xác định"</strong></li>
+                  <li>Quay lại và cài đặt tiếp</li>
+                </ul>
+              </li>
+              <li>Mở ứng dụng và cấp quyền <strong>Camera</strong> và <strong>Thông báo</strong> khi được hỏi.</li>
+            </ol>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section>
+            <h3 style="margin:0 0 8px;">Yêu cầu hệ thống</h3>
+            <ul style="padding-left: 20px; margin: 0;">
+              <li>Android 7.0 (API level 24) trở lên</li>
+              <li>50MB dung lượng trống</li>
+              <li>Kết nối Internet</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- iOS Tab -->
+    <mat-tab label="iOS">
+      <div class="tab-content" style="padding: 20px 0;">
+        <div style="display:grid; gap:16px;">
+          <section>
+            <h3 style="margin:0 0 8px;">
+              <mat-icon style="vertical-align: middle;">apple</mat-icon>
+              Cài đặt trên iPhone/iPad
+            </h3>
+            
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>download</mat-icon>
+                  <span style="margin-left: 8px;">Tải từ TestFlight (Beta)</span>
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+              <div style="padding: 16px 0;">
+                <p><strong>TestFlight</strong> là cách tốt nhất để cài app iOS trong giai đoạn thử nghiệm:</p>
+                <ol style="line-height: 1.8;">
+                  <li>Cài đặt app <strong>TestFlight</strong> từ App Store (miễn phí)</li>
+                  <li>Nhấn vào link mời beta (sẽ được admin gửi qua email/Zalo)</li>
+                  <li>Chấp nhận lời mời và cài đặt app</li>
+                  <li>App sẽ tự động cập nhật khi có phiên bản mới</li>
+                </ol>
+                <p style="color: #2e7d32; font-weight: 500; margin-top: 12px;">
+                  ✅ Đây là phương thức được Apple khuyến nghị
+                </p>
+              </div>
+            </mat-expansion-panel>
+
+            <mat-expansion-panel style="margin-top: 8px;">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>store</mat-icon>
+                  <span style="margin-left: 8px;">Tải từ App Store (Chính thức)</span>
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+              <div style="padding: 16px 0;">
+                <p>Ứng dụng sẽ có mặt trên App Store sau khi hoàn tất quy trình phê duyệt của Apple.</p>
+                <p style="color:#666; font-size: 14px;">
+                  <mat-icon style="font-size: 16px; vertical-align: middle;">info</mat-icon>
+                  Hiện tại đang trong giai đoạn phát triển
+                </p>
+              </div>
+            </mat-expansion-panel>
+
+            <mat-expansion-panel style="margin-top: 8px;">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>developer_mode</mat-icon>
+                  <span style="margin-left: 8px;">Cài đặt Ad Hoc (Nâng cao)</span>
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+              <div style="padding: 16px 0;">
+                <p><strong>Ad Hoc distribution</strong> - cho tối đa 100 thiết bị test:</p>
+                <ol style="line-height: 1.8;">
+                  <li>Gửi UDID của thiết bị cho admin (Cài đặt → Chung → Giới thiệu → UDID)</li>
+                  <li>Admin sẽ thêm UDID vào Developer Portal</li>
+                  <li>Nhận file IPA và cài qua iTunes/Finder hoặc dịch vụ OTA</li>
+                </ol>
+                <a mat-stroked-button [href]="ipaUrl" download style="margin-top: 12px;">
+                  <mat-icon>download</mat-icon>
+                  <span style="margin-left:6px;">Tải file IPA (nếu có)</span>
+                </a>
+              </div>
+            </mat-expansion-panel>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section>
+            <h3 style="margin:0 0 8px;">Yêu cầu hệ thống</h3>
+            <ul style="padding-left: 20px; margin: 0;">
+              <li>iOS 13.0 trở lên</li>
+              <li>iPhone 6s hoặc mới hơn / iPad Air 2 hoặc mới hơn</li>
+              <li>50MB dung lượng trống</li>
+              <li>Kết nối Internet</li>
+            </ul>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section>
+            <h3 style="margin:0 0 8px;">Build app iOS từ source code</h3>
+            <p>Nếu bạn là developer và muốn tự build app iOS:</p>
+            <ul style="padding-left: 20px; margin: 0;">
+              <li>Cần có máy Mac với macOS và Xcode</li>
+              <li>Apple Developer Account ($99/năm để publish)</li>
+              <li>Xem hướng dẫn chi tiết trong file <code>IOS_BUILD_GUIDE.md</code></li>
+            </ul>
+            <p style="margin-top: 12px;">
+              <strong>Lưu ý:</strong> Không thể build iOS app trên Windows. 
+              Nếu không có Mac, có thể dùng dịch vụ Mac cloud hoặc TestFlight.
+            </p>
+          </section>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Common Info Tab -->
+    <mat-tab label="Thông tin chung">
+      <div class="tab-content" style="padding: 20px 0;">
+        <div style="display:grid; gap:16px;">
+          <section>
+            <h3 style="margin:0 0 8px;">Kết nối đến máy chủ</h3>
+            <p>Ứng dụng kết nối đến API tại: <code>{{ apiUrl }}</code></p>
+            <p>Nếu bạn tự cài đặt server, hãy đảm bảo:</p>
+            <ul style="padding-left: 20px; margin: 0; line-height: 1.8;">
+              <li>Server chạy và truy cập được từ mạng của điện thoại</li>
+              <li>Nếu dùng HTTP (không HTTPS), cần cấu hình đặc biệt:
+                <ul>
+                  <li>Android: Đã cấu hình sẵn cho phép HTTP trong <code>network_security_config.xml</code></li>
+                  <li>iOS: Cần thêm exception trong <code>Info.plist</code></li>
+                </ul>
+              </li>
+              <li>Khuyến nghị dùng HTTPS cho bảo mật và tính năng camera ổn định</li>
+            </ul>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section>
+            <h3 style="margin:0 0 8px;">Tính năng Mobile App</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 12px;">
+              <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                <mat-icon color="primary">account_tree</mat-icon>
+                <strong style="display: block; margin: 8px 0 4px;">Cây gia phả tương tác</strong>
+                <p style="margin: 0; font-size: 14px; color: #666;">Xem và điều hướng cây dòng họ trên màn hình cảm ứng</p>
+              </div>
+              <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                <mat-icon color="primary">photo_camera</mat-icon>
+                <strong style="display: block; margin: 8px 0 4px;">Chụp/upload ảnh</strong>
+                <p style="margin: 0; font-size: 14px; color: #666;">Chụp ảnh trực tiếp hoặc chọn từ thư viện</p>
+              </div>
+              <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                <mat-icon color="primary">notifications</mat-icon>
+                <strong style="display: block; margin: 8px 0 4px;">Thông báo sự kiện</strong>
+                <p style="margin: 0; font-size: 14px; color: #666;">Nhận nhắc nhở sinh nhật, giỗ, họp mặt</p>
+              </div>
+              <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                <mat-icon color="primary">calendar_month</mat-icon>
+                <strong style="display: block; margin: 8px 0 4px;">Lịch vạn niên</strong>
+                <p style="margin: 0; font-size: 14px; color: #666;">Xem lịch Âm Dương, ngày tốt xấu</p>
+              </div>
+              <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                <mat-icon color="primary">article</mat-icon>
+                <strong style="display: block; margin: 8px 0 4px;">Tin tức dòng họ</strong>
+                <p style="margin: 0; font-size: 14px; color: #666;">Đọc và chia sẻ bài viết</p>
+              </div>
+              <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                <mat-icon color="primary">offline_pin</mat-icon>
+                <strong style="display: block; margin: 8px 0 4px;">Hoạt động offline</strong>
+                <p style="margin: 0; font-size: 14px; color: #666;">Duyệt dữ liệu đã tải khi mất mạng</p>
+              </div>
+            </div>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section>
+            <h3 style="margin:0 0 8px;">Triển khai file cài đặt</h3>
+            <p>Cho quản trị viên website:</p>
+            <ul style="padding-left: 20px; margin: 0;">
+              <li>Đặt file APK tại: <code>web/public/downloads/giapha-android.apk</code></li>
+              <li>Đặt file IPA tại: <code>web/public/downloads/giapha-ios.ipa</code></li>
+              <li>Sau khi build và deploy, link tải sẽ tự động hoạt động</li>
+              <li>Khuyến nghị dùng TestFlight cho iOS thay vì IPA file trực tiếp</li>
+            </ul>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section>
+            <h3 style="margin:0 0 8px;">Hỗ trợ & Liên hệ</h3>
+            <p>Nếu gặp vấn đề khi cài đặt hoặc sử dụng app:</p>
+            <ul style="padding-left: 20px; margin: 0;">
+              <li>Liên hệ quản trị viên dòng họ qua Zalo/Facebook</li>
+              <li>Gửi email đến support (nếu có)</li>
+              <li>Báo lỗi trên GitHub repository (cho developer)</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</mat-card>

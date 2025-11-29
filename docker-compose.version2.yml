@@ -1,0 +1,39 @@
+version: '3.9'
+
+# Docker Compose for Production - Using images from Docker Hub
+# Version 2.0 - Gia Phả Online
+
+services:
+  server:
+    image: vutheviet/giapha5:server-version2
+    restart: unless-stopped
+    environment:
+      # MongoDB Atlas connection
+      MONGODB_URI: mongodb+srv://allinoneuser:Viet686868@allinone.cniws0g.mongodb.net/giapha?retryWrites=true&w=majority&appName=allinone
+      PORT: 3000
+      NODE_ENV: production
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - giapha-network
+
+  web:
+    image: vutheviet/giapha5:web-version2
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web/public/downloads:/usr/share/nginx/html/downloads
+    networks:
+      - giapha-network
+
+networks:
+  giapha-network:
+    driver: bridge
+
+# Usage:
+# docker-compose -f docker-compose.version2.yml up -d
+# docker-compose -f docker-compose.version2.yml down
+# docker-compose -f docker-compose.version2.yml logs -f

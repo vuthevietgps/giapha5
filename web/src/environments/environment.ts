@@ -1,4 +1,6 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'http://localhost:3000/api',
+  apiBaseUrl: '/api',
+  apkUrl: '/downloads/giapha-android.apk',
+  ipaUrl: '/downloads/giapha-ios.ipa',
 };

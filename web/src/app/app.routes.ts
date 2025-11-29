@@ -14,9 +14,16 @@ import { CalendarPage } from './features/calendar/calendar-page';
 import { BranchPage } from './features/members/pages/member-branch/branch-page';
 import { BranchCalendarPage } from './features/members/pages/member-branch/branch-calendar-page';
 import { BackgroundsPage } from './features/backgrounds/pages/backgrounds-page';
+import { MobileSetupPage } from './features/mobile/pages/mobile-setup/mobile-setup.page';
+import { LoginPage } from './features/auth/pages/login/login.page';
+import { PricingPage } from './features/pricing/pages/pricing/pricing.page';
+import { ReportsPage } from './features/reports/pages/reports/reports.page';
+import { NotificationSettingsComponent } from './features/notifications/notification-settings.component';
+import { HomeRoute } from './home-route';
 
 export const routes: Routes = [
-	{ path: '', pathMatch: 'full', redirectTo: 'users' },
+	{ path: '', pathMatch: 'full', component: HomeRoute },
+	{ path: 'login', component: LoginPage, title: 'Đăng nhập' },
 	{ path: 'users', component: UserList, title: 'Quản lý người dùng' },
 	{ path: 'users/new', component: UserForm, title: 'Thêm người dùng' },
 	{ path: 'users/:id/edit', component: UserForm, title: 'Sửa người dùng' },
@@ -36,4 +43,10 @@ export const routes: Routes = [
 	{ path: 'members/branch-calendar', component: BranchCalendarPage, title: 'Lịch quan trọng (nhánh)' },
 	{ path: 'calendar', component: CalendarPage, title: 'Lịch vạn niên' },
 	{ path: 'backgrounds', component: BackgroundsPage, title: 'Ảnh nền' },
+	{ path: 'mobile-setup', component: MobileSetupPage, title: 'Cài đặt cho điện thoại' },
+	{ path: 'notifications', component: NotificationSettingsComponent, title: 'Cài đặt Thông báo' },
+	
+	// SUPER_ADMIN exclusive pages
+	{ path: 'pricing', component: PricingPage, title: 'Báo giá & Thanh toán' },
+	{ path: 'reports', component: ReportsPage, title: 'Báo cáo Tổng hợp' },
 ];

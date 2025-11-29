@@ -1,0 +1,26 @@
+services:
+  server:
+    environment:
+      # Override with Atlas URI in the shell if needed
+      MONGODB_URI: ${MONGODB_URI:-mongodb://root:example@mongo:27017/giapha?authSource=admin}
+
+  web:
+    # Map a high port for Cloudflare tunnel (optional)
+    ports:
+      - "${PORT:-8084}:80"
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.${SITE_NAME:-passport24h-shop}.rule=Host(`${DOMAIN:-passport24h.shop}`) || Host(`www.${DOMAIN:-passport24h.shop}`)'
+      - 'traefik.http.routers.${SITE_NAME:-passport24h-shop}.entrypoints=websecure'
+      - 'traefik.http.routers.${SITE_NAME:-passport24h-shop}.tls=true'
+      - 'traefik.http.services.${SITE_NAME:-passport24h-shop}.loadbalancer.server.port=80'
+      - 'traefik.http.routers.${SITE_NAME:-passport24h-shop}-http.rule=Host(`${DOMAIN:-passport24h.shop}`) || Host(`www.${DOMAIN:-passport24h.shop}`)'
+      - 'traefik.http.routers.${SITE_NAME:-passport24h-shop}-http.entrypoints=web'
+      - 'traefik.http.routers.${SITE_NAME:-passport24h-shop}-http.middlewares=redirect-to-https'
+      - 'traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https'
+    networks:
+      - traefik-network
+
+networks:
+  traefik-network:
+    external: true

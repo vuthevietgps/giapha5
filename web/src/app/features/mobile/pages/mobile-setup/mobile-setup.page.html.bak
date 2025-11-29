@@ -1,0 +1,47 @@
+﻿<mat-card class="card page-container" style="max-width: 900px;">
+  <h2 style="margin-top: 0; display:flex; align-items:center; gap:8px;">
+    <mat-icon>smartphone</mat-icon> CÃ i Ä‘áº·t cho Ä‘iá»‡n thoáº¡i
+  </h2>
+
+  <div style="display:grid; gap:16px;">
+    <section>
+      <h3 style="margin:0 0 8px;">Táº£i vá» vÃ  cÃ i Ä‘áº·t (Android)</h3>
+      <p>Nháº¥n nÃºt dÆ°á»›i Ä‘Ã¢y Ä‘á»ƒ táº£i file APK rá»“i cÃ i Ä‘áº·t trÃªn Ä‘iá»‡n thoáº¡i Android.</p>
+      <a mat-flat-button color="primary" [href]="apkUrl" download>
+        <mat-icon>download</mat-icon>
+        <span style="margin-left:6px;">Táº£i á»©ng dá»¥ng Android (APK)</span>
+      </a>
+      <p style="color:#666; margin-top:8px;">LiÃªn káº¿t táº£i: <a [href]="apkUrl">{{ apkUrl }}</a></p>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <section>
+      <h3 style="margin:0 0 8px;">HÆ°á»›ng dáº«n cÃ i Ä‘áº·t</h3>
+      <ol style="padding-left: 20px; margin: 0;">
+        <li>Táº£i file APK vá» mÃ¡y (xem nÃºt á»Ÿ trÃªn).</li>
+        <li>Má»Ÿ file APK vÃ  chá»n CÃ i Ä‘áº·t. Náº¿u cÃ³ cáº£nh bÃ¡o â€œNguá»“n khÃ´ng xÃ¡c Ä‘á»‹nh/Unknown sourcesâ€, vÃ o CÃ i Ä‘áº·t vÃ  cho phÃ©p cÃ i Ä‘áº·t tá»« nguá»“n nÃ y, sau Ä‘Ã³ quay láº¡i cÃ i tiáº¿p.</li>
+        <li>Má»Ÿ á»©ng dá»¥ng, cáº¥p quyá»n Camera khi Ä‘Æ°á»£c há»i Ä‘á»ƒ chá»¥p/chá»n áº£nh trong form thÃ nh viÃªn.</li>
+      </ol>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <section>
+      <h3 style="margin:0 0 8px;">Káº¿t ná»‘i Ä‘áº¿n mÃ¡y chá»§</h3>
+      <p>á»¨ng dá»¥ng dÃ¹ng API táº¡i: <code>{{ apiUrl }}</code>. Náº¿u báº¡n tá»± cÃ i Ä‘áº·t server, hÃ£y Ä‘áº£m báº£o:</p>
+      <ul style="padding-left: 20px; margin: 0;">
+        <li>Server cháº¡y vÃ  truy cáº­p Ä‘Æ°á»£c tá»« máº¡ng cá»§a Ä‘iá»‡n thoáº¡i.</li>
+        <li>Náº¿u server dÃ¹ng HTTP (khÃ´ng HTTPS), cáº§n báº­t cho phÃ©p káº¿t ná»‘i HTTP trong app Android (Ä‘Ã£ cáº¥u hÃ¬nh sáºµn).</li>
+        <li>Náº¿u server public trÃªn Internet, nÃªn dÃ¹ng HTTPS Ä‘á»ƒ trÃ¬nh duyá»‡t/mobile truy cáº­p camera á»•n Ä‘á»‹nh.</li>
+      </ul>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <section>
+      <h3 style="margin:0 0 8px;">Triá»ƒn khai trÃªn mÃ¡y chá»§</h3>
+      <p>Äáº·t file APK vÃ o Ä‘Æ°á»ng dáº«n <code>/downloads/giapha-android.apk</code> cá»§a website (thÆ° má»¥c <code>web/public/downloads</code> trong source). Sau khi build vÃ  deploy, liÃªn káº¿t táº£i á»Ÿ trÃªn sáº½ hoáº¡t Ä‘á»™ng.</p>
+    </section>
+  </div>
+</mat-card>

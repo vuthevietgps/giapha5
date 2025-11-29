@@ -1,0 +1,18 @@
+services:
+  server:
+    image: vutheviet/giapha5:server-latest
+    environment:
+      MONGODB_URI: ${MONGODB_URI:-mongodb://root:example@mongo:27017/giapha?authSource=admin}
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongo
+
+  web:
+    image: vutheviet/giapha5:web-latest
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web/public/downloads:/usr/share/nginx/html/downloads

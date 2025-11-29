@@ -29,4 +29,8 @@ export class UserService {
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
+
+  getByRole(role: string): Observable<User[]> {
+    return this.http.get<User[]>(`${this.baseUrl}/by-role/${role}`);
+  }
 }

@@ -1,50 +1,149 @@
-<p>family-list works!</p>
 <mat-toolbar color="primary">
-	<span>Quản lý dòng họ</span>
+	<span>Danh sách Dòng họ</span>
 	<span style="flex:1 1 auto"></span>
-	<a mat-flat-button color="accent" routerLink="/families/new">
+	<a mat-flat-button color="accent" routerLink="/families/new" *ngIf="hasPermission('families', 'create')">
 		<mat-icon>add</mat-icon>
-		Thêm mới
+		Thêm dòng họ
 	</a>
+
+	<button mat-flat-button (click)="load()" [disabled]="isLoading">
+		<mat-icon>refresh</mat-icon>
+		Tải lại
+	</button>
 </mat-toolbar>
 
 <mat-card class="card page-container">
-	<table mat-table [dataSource]="data" class="mat-elevation-z2" style="width: 100%">
+	<div *ngIf="isLoading" class="loading-spinner">
+		<mat-icon>hourglass_empty</mat-icon>
+		Đang tải...
+	</div>
+	
+	<table mat-table [dataSource]="data" class="mat-elevation-z2 enhanced-table" style="width: 100%">
+		<!-- Family Name Column -->
 		<ng-container matColumnDef="name">
-			<th mat-header-cell *matHeaderCellDef> Tên dòng họ </th>
-			<td mat-cell *matCellDef="let e"> {{ e.name }} </td>
+			<th mat-header-cell *matHeaderCellDef> Dòng họ </th>
+			<td mat-cell *matCellDef="let family">
+				<div class="family-cell">
+					<div class="family-name">{{ family.name }}</div>
+					<div class="family-contact">{{ family.contactName }}</div>
+					<div class="family-contact-info">{{ family.contactPhone }}</div>
+				</div>
+			</td>
 		</ng-container>
 
-		<ng-container matColumnDef="contactName">
-			<th mat-header-cell *matHeaderCellDef> Người liên hệ </th>
-			<td mat-cell *matCellDef="let e"> {{ e.contactName }} </td>
+		<!-- Admin Column -->
+		<ng-container matColumnDef="admin">
+			<th mat-header-cell *matHeaderCellDef> Admin </th>
+			<td mat-cell *matCellDef="let family">
+				<div class="admin-cell">
+					<div class="admin-name" *ngIf="family.adminName; else noAdmin">
+						<mat-icon>person</mat-icon>
+						{{ family.adminName }}
+					</div>
+					<ng-template #noAdmin>
+						<div class="no-admin">
+							<mat-icon>person_off</mat-icon>
+							Chưa có admin
+						</div>
+					</ng-template>
+					<div class="admin-email" *ngIf="family.adminEmail">{{ family.adminEmail }}</div>
+				</div>
+			</td>
 		</ng-container>
 
-		<ng-container matColumnDef="contactPhone">
-			<th mat-header-cell *matHeaderCellDef> SĐT </th>
-			<td mat-cell *matCellDef="let e"> {{ e.contactPhone }} </td>
+		<!-- Statistics Column -->
+		<ng-container matColumnDef="stats">
+			<th mat-header-cell *matHeaderCellDef> Thống kê </th>
+			<td mat-cell *matCellDef="let family">
+				<div class="stats-cell">
+					<div class="stat-item">
+						<mat-icon>people</mat-icon>
+						{{ family.memberCount }} thành viên
+					</div>
+					<div class="stat-item" *ngIf="family.totalRevenue > 0">
+						<mat-icon>monetization_on</mat-icon>
+						{{ formatCurrency(family.totalRevenue) }}
+					</div>
+				</div>
+			</td>
 		</ng-container>
 
-		<ng-container matColumnDef="address">
-			<th mat-header-cell *matHeaderCellDef> Địa chỉ </th>
-			<td mat-cell *matCellDef="let e"> {{ e.address }} </td>
+		<!-- Subscription Column -->
+		<ng-container matColumnDef="subscription">
+			<th mat-header-cell *matHeaderCellDef> Đăng ký </th>
+			<td mat-cell *matCellDef="let family">
+				<div class="subscription-cell">
+					<div class="subscription-date" *ngIf="family.subscriptionEndDate">
+						<mat-icon>schedule</mat-icon>
+						Hết hạn: {{ family.subscriptionEndDate | date:'dd/MM/yyyy' }}
+					</div>
+					<div class="created-date">
+						<mat-icon>calendar_today</mat-icon>
+						Tạo: {{ family.createdAt | date:'dd/MM/yyyy' }}
+					</div>
+				</div>
+			</td>
 		</ng-container>
 
+		<!-- Status Column -->
+		<ng-container matColumnDef="status">
+			<th mat-header-cell *matHeaderCellDef> Trạng thái </th>
+			<td mat-cell *matCellDef="let family">
+				<div class="status-cell">
+					<mat-chip [ngClass]="getStatusClass(family.subscriptionStatus)">
+						{{ getStatusLabel(family.subscriptionStatus) }}
+					</mat-chip>
+					<div class="activity-date" *ngIf="family.lastActivityDate">
+						HĐ cuối: {{ family.lastActivityDate | date:'dd/MM' }}
+					</div>
+				</div>
+			</td>
+		</ng-container>
+
+		<!-- Actions Column -->
 		<ng-container matColumnDef="actions">
 			<th mat-header-cell *matHeaderCellDef> Hành động </th>
-			<td mat-cell *matCellDef="let e">
-				<a mat-stroked-button color="primary" [routerLink]="['/families', e.id, 'edit']">
-					<mat-icon>edit</mat-icon>
-					Sửa
-				</a>
-				<button mat-stroked-button color="warn" (click)="delete(e.id)">
-					<mat-icon>delete</mat-icon>
-					Xóa
-				</button>
+			<td mat-cell *matCellDef="let family">
+				<div class="actions-cell">
+					<!-- Basic Edit -->
+					<a mat-stroked-button color="primary" [routerLink]="['/families', family.id, 'edit']" 
+					   *ngIf="hasPermission('families', 'edit')">
+						<mat-icon>edit</mat-icon>
+						Chỉnh sửa
+					</a>
+					
+					<!-- SUPER_ADMIN actions -->
+					<div class="super-admin-actions" *ngIf="hasPermission('families', 'create')">
+						<button mat-stroked-button color="accent" (click)="assignAdmin(family)" 
+						        title="Gán admin cho dòng họ">
+							<mat-icon>assignment_ind</mat-icon>
+							Gán Admin
+						</button>
+						
+						<button mat-stroked-button color="primary" (click)="addSubscriptionTime(family)"
+						        title="Cộng thời gian sử dụng">
+							<mat-icon>schedule</mat-icon>
+							Cộng thời gian
+						</button>
+					</div>
+					
+					<!-- Delete -->
+					<button mat-stroked-button color="warn" (click)="delete(family.id)"
+					        *ngIf="hasPermission('families', 'delete')">
+						<mat-icon>delete</mat-icon>
+						Xóa
+					</button>
+				</div>
 			</td>
 		</ng-container>
 
 		<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-		<tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+		<tr mat-row *matRowDef="let row; columns: displayedColumns" 
+		    [ngClass]="{'expired-row': row.subscriptionStatus === 'expired'}"></tr>
 	</table>
+	
+	<div *ngIf="data.length === 0 && !isLoading" class="no-data">
+		<mat-icon>info</mat-icon>
+		Chưa có dòng họ nào
+	</div>
 </mat-card>

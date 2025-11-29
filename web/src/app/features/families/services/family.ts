@@ -28,4 +28,32 @@ export class FamilyService {
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
+
+  /**
+   * Get families with comprehensive statistics and admin information
+   */
+  getFamiliesWithStats(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/management/stats`);
+  }
+
+  /**
+   * Assign admin to family (SUPER_ADMIN only)
+   */
+  assignAdmin(familyId: string, adminId: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/management/${familyId}/assign-admin`, { adminId });
+  }
+
+  /**
+   * Add subscription time to family (SUPER_ADMIN only)
+   */
+  addSubscriptionTime(familyId: string, months: number, reason: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/management/${familyId}/add-time`, { months, reason });
+  }
+
+  /**
+   * Get available admins for assignment
+   */
+  getAvailableAdmins(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/users/by-role/ADMIN_DONG_HO`);
+  }
 }

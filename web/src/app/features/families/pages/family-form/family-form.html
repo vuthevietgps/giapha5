@@ -9,6 +9,11 @@
 		</mat-form-field>
 
 		<mat-form-field appearance="outline">
+			<mat-label>Mô tả dòng họ</mat-label>
+			<textarea matInput formControlName="description" rows="3" placeholder="Nhập mô tả về dòng họ (tùy chọn)"></textarea>
+		</mat-form-field>
+
+		<mat-form-field appearance="outline">
 			<mat-label>Tên người liên hệ</mat-label>
 			<input matInput formControlName="contactName" />
 		</mat-form-field>
@@ -21,6 +26,18 @@
 		<mat-form-field appearance="outline">
 			<mat-label>Địa chỉ dòng họ</mat-label>
 			<input matInput formControlName="address" />
+		</mat-form-field>
+
+		<!-- Admin selection - only for SUPER_ADMIN -->
+		<mat-form-field appearance="outline" *ngIf="canManageAdmins">
+			<mat-label>Chọn Admin dòng họ</mat-label>
+			<mat-select formControlName="adminId" placeholder="Chọn người quản lý dòng họ">
+				<mat-option value="">-- Chưa chỉ định --</mat-option>
+				<mat-option *ngFor="let admin of availableAdmins" [value]="admin.id">
+					{{ admin.fullName }} ({{ admin.email }})
+				</mat-option>
+			</mat-select>
+			<mat-hint>Chỉ có thể chọn người dùng có role ADMIN_DONG_HO</mat-hint>
 		</mat-form-field>
 
 		<div style="display:flex; gap: 8px;">

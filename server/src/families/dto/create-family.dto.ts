@@ -22,4 +22,12 @@ export class CreateFamilyDto {
   @IsOptional()
   @IsString()
   rootMember?: string;
+
+  @IsOptional()
+  @IsString()
+  adminId?: string; // ID admin quản lý dòng họ
+
+  @IsOptional()
+  @IsString()
+  description?: string; // Mô tả dòng họ
 }

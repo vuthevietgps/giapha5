@@ -47,8 +47,6 @@ import { collectSubtree } from './tree-focus';
     FormsModule,
     MatInputModule,
     RouterModule,
-  // TreeSelectFatherDialog is opened dynamically (not declared in template)
-  TreeSelectFatherDialog,
   ],
   templateUrl: './tree-page.html',
   styles: [`

@@ -11,6 +11,7 @@ import { UnionsModule } from './unions/unions.module';
 import { AuditModule } from './audit/audit.module';
 import { PostsModule } from './posts/posts.module';
 import { BackgroundsModule } from './backgrounds/backgrounds.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { BackgroundsModule } from './backgrounds/backgrounds.module';
     AuditModule,
     PostsModule,
     BackgroundsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

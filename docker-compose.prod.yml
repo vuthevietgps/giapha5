@@ -1,0 +1,10 @@
+services:
+  web:
+    # Publish on port 80 for http://passport24h.shop/
+    ports:
+      - "80:80"
+  server:
+    # Override DB to Atlas if desired (set real URI via environment or .env)
+    environment:
+      # Example: MONGODB_URI: "mongodb+srv://user:pass@cluster.mongodb.net/giapha"
+      MONGODB_URI: ${MONGODB_URI:-mongodb://root:example@mongo:27017/giapha?authSource=admin}

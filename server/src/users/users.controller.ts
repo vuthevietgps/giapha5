@@ -31,4 +31,12 @@ export class UsersController {
 	remove(@Param('id') id: string) {
 		return this.usersService.remove(id);
 	}
+
+	/**
+	 * Get users by role - for admin selection in family management
+	 */
+	@Get('by-role/:role')
+	findByRole(@Param('role') role: string) {
+		return this.usersService.findByRole(role);
+	}
 }

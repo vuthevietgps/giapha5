@@ -17,6 +17,7 @@ import type { Family } from '../../../families/models/family.model';
 import type { Position } from '../../../positions/models/position.model';
 import type { Member } from '../../models/member.model';
 import type { Union } from '../../models/union.model';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 @Component({
   selector: 'app-member-form',
@@ -52,6 +53,7 @@ export class MemberForm implements OnInit {
   familyMembers: Member[] = [];
   selectedChildrenIds: string[] = [];
   selectedFile: File | null = null;
+  previewUrl: string | null = null;
   fathersOptions: Member[] = [];
   mothersOptions: Member[] = [];
   spouseOptions: Member[] = [];
@@ -100,6 +102,7 @@ export class MemberForm implements OnInit {
           dod: m.dod?.substring(0,10),
           position: m.position,
         });
+        this.previewUrl = m.photoUrl || null;
         this.originalFamilyId = m.family || null;
         if (m.family) {
           this.loadFamilyMembers(m.family);
@@ -195,7 +198,48 @@ export class MemberForm implements OnInit {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length) {
       this.selectedFile = input.files[0];
+      try {
+        this.previewUrl = URL.createObjectURL(this.selectedFile);
+      } catch {
+        this.previewUrl = null;
+      }
     }
+  }
+
+  async takePhoto() {
+    await this.pickPhoto(CameraSource.Camera);
+  }
+
+  async pickFromGallery() {
+    await this.pickPhoto(CameraSource.Photos);
+  }
+
+  private async pickPhoto(source: CameraSource) {
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 70,
+        allowEditing: false,
+        source,
+        resultType: CameraResultType.Uri,
+        promptLabelHeader: 'Chọn ảnh',
+        promptLabelPhoto: 'Thư viện',
+        promptLabelPicture: 'Chụp ảnh',
+      });
+      const webPath = photo.webPath || photo.path;
+      if (!webPath) return;
+      await this.setSelectedFileFromWebPath(webPath);
+      this.previewUrl = webPath;
+    } catch (err) {
+      console.warn('Camera selection cancelled or failed:', err);
+    }
+  }
+
+  private async setSelectedFileFromWebPath(webPath: string) {
+    const res = await fetch(webPath);
+    const blob = await res.blob();
+    const ext = blob.type?.split('/')?.[1] || 'jpeg';
+    const file = new File([blob], `member-${Date.now()}.${ext}`, { type: blob.type || 'image/jpeg' });
+    this.selectedFile = file;
   }
 
   loadUnions(familyId: string) {

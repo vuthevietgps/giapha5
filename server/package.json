@@ -20,7 +20,13 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/seed.ts",
     "seed:nguyen": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/seed_nguyen.ts",
-    "db:reset": "ts-node -r dotenv/config scripts/reset_db.ts"
+    "db:reset": "ts-node -r dotenv/config scripts/reset_db.ts",
+    "db:migrate-roles": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/migrate_roles.ts",
+    "user:create-demo": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/create_demo_user.ts",
+    "users:create-test": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/create_test_users.ts",
+    "users:list": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/list_users.ts",
+    "users:create-super-admin": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/create_super_admin.ts",
+    "users:create-admins": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/create_admin_users.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

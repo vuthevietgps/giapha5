@@ -1,6 +1,10 @@
 /* Angular Material prebuilt theme */
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
+/* Responsive Breakpoints */
+$mobile-breakpoint: 768px;
+$tablet-breakpoint: 1024px;
+
 /* Global styles */
 html, body {
 	height: 100%;
@@ -28,5 +32,82 @@ body {
 
 .card {
 	margin: 12px;
+}
+
+/* ========== RESPONSIVE STYLES ========== */
+
+/* Mobile Styles (< 768px) */
+@media (max-width: 768px) {
+	.page-container {
+		padding: 8px;
+		max-width: 100%;
+	}
+
+	.card {
+		margin: 8px 4px;
+	}
+
+	/* Hide sidebar on mobile by default */
+	.app-shell {
+		--sidebar-width: 0px;
+	}
+
+	/* Make tables scrollable on mobile */
+	.mat-mdc-table {
+		font-size: 12px;
+	}
+
+	/* Stack form fields vertically */
+	form {
+		display: flex;
+		flex-direction: column;
+	}
+
+	/* Adjust button sizes */
+	.mat-mdc-raised-button,
+	.mat-mdc-flat-button {
+		min-width: auto;
+		padding: 0 12px;
+	}
+
+	/* Responsive dialog */
+	.mat-mdc-dialog-container {
+		max-width: 95vw !important;
+	}
+}
+
+/* Tablet Styles (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+	.page-container {
+		padding: 12px;
+		max-width: 100%;
+	}
+
+	.app-shell {
+		--sidebar-width: 200px;
+	}
+}
+
+/* Desktop Styles (> 1024px) */
+@media (min-width: 1024px) {
+	.page-container {
+		padding: 16px;
+	}
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+	/* Increase touch target sizes */
+	button,
+	a,
+	.mat-mdc-icon-button {
+		min-height: 44px;
+		min-width: 44px;
+	}
+
+	/* Reduce hover effects on touch devices */
+	*:hover {
+		transition: none;
+	}
 }
 /* You can add global styles to this file, and also import other style files */

@@ -20,9 +20,25 @@
         <input matInput formControlName="photoUrl" />
       </mat-form-field>
 
-      <div>
-        <label for="photoFile">Tải ảnh lên</label>
-        <input id="photoFile" type="file" (change)="onFileSelected($event)" accept="image/*" />
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button mat-stroked-button color="primary" type="button" (click)="takePhoto()">
+            <mat-icon>photo_camera</mat-icon>
+            <span style="margin-left:6px;">Chụp ảnh</span>
+          </button>
+          <button mat-stroked-button type="button" (click)="pickFromGallery()">
+            <mat-icon>photo_library</mat-icon>
+            <span style="margin-left:6px;">Chọn từ thư viện</span>
+          </button>
+          <label for="photoFile" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;" title="Chọn tệp ảnh">
+            <mat-icon>upload</mat-icon>
+            <span>Tải ảnh lên</span>
+          </label>
+          <input id="photoFile" type="file" (change)="onFileSelected($event)" accept="image/*" style="display:none;" />
+        </div>
+        <div *ngIf="previewUrl || form.controls.photoUrl.value" style="max-width: 240px;">
+          <img [src]="previewUrl || form.controls.photoUrl.value" alt="Xem trước ảnh" style="max-width:100%; border-radius:4px; border:1px solid #ddd;"/>
+        </div>
       </div>
 
       <mat-form-field appearance="outline">

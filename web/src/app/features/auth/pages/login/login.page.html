@@ -1,0 +1,17 @@
+<mat-card class="login-card">
+  <h2>Đăng nhập</h2>
+  <form [formGroup]="form" (ngSubmit)="login()" class="login-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Email</mat-label>
+      <input matInput type="email" formControlName="email" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Mật khẩu</mat-label>
+      <input matInput type="password" formControlName="password" />
+    </mat-form-field>
+    <div class="actions">
+      <button mat-flat-button color="primary" type="submit">Đăng nhập</button>
+    </div>
+  </form>
+  <p style="color:#6b7280;font-size:12px;margin-top:12px">Dùng email đã được tạo trong mục Người dùng.</p>
+</mat-card>

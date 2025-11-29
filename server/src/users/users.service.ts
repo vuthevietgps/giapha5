@@ -56,4 +56,17 @@ export class UsersService {
 		const res = await this.userModel.findByIdAndDelete(id).exec();
 		if (!res) throw new NotFoundException('Không tìm thấy người dùng');
 	}
+
+	async findByEmailWithPassword(email: string): Promise<User & { password: string }> {
+		const u: any = await this.userModel
+			.findOne({ email: email.toLowerCase() })
+			.select('+password')
+			.exec();
+		if (!u) throw new NotFoundException('Không tìm thấy người dùng');
+		return u;
+	}
+
+	async findByRole(role: string): Promise<User[]> {
+		return this.userModel.find({ role }).exec();
+	}
 }

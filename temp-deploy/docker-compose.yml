@@ -1,0 +1,23 @@
+services:
+  server:
+    image: giapha5-server:local
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: "mongodb+srv://allinoneuser:Viet686868@allinone.cniws0g.mongodb.net/giapha?retryWrites=true&w=majority&appName=allinone"
+      PORT: 3000
+      NODE_ENV: production
+    volumes:
+      - ./uploads:/app/uploads
+
+  web:
+    image: giapha5-web:local
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "8084:80"
+    volumes:
+      - ./downloads:/usr/share/nginx/html/downloads
+
+networks:
+  default:
