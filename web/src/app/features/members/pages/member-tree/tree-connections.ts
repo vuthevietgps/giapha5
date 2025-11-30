@@ -20,6 +20,24 @@ export interface BuiltConnections {
   overlayH: number;
 }
 
+// Per-family + per-generation + hub motherId -> color mapping
+// familyId -> generationIndex -> hubKey(anchorId) -> motherId -> color
+const MOTHER_COLOR_MAP_BY_FAMILY_LEVEL_HUB = new Map<string, Map<number, Map<string, Map<string,string>>>>();
+const BASE_PALETTE = ['#5B8FF9', '#5AD8A6', '#F6BD16', '#E86452', '#6DC8EC', '#9270CA'];
+const NEUTRAL_COLOR = '#BFBFBF';
+function hslColor(index: number, total: number): string {
+  const h = Math.round((360 * index) / Math.max(1, total));
+  const s = 70; const l = 52;
+  const a = s * Math.min(l, 100 - l) / 10000;
+  const f = (m: number) => {
+    const k = (m + h / 30) % 12;
+    const c = l/100 - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+// hslExpand from shared util
+
 export function buildConnections(input: BuildConnectionsInput): BuiltConnections {
   const { baseRect, anchorRects, childRects, memberById, spousesByMember, style, colors, colorFatherMotherPair, colorMotherFatherPair } = input;
   type Conn = {x1:number;y1:number;x2:number;y2:number;color:string; anchorId?: string};
@@ -27,6 +45,16 @@ export function buildConnections(input: BuildConnectionsInput): BuiltConnections
   const connsRaw: Conn[] = [];
   const piecesByAnchor = new Map<string, Piece[]>();
   let minX = 0, minY = 0, maxX = 0, maxY = 0;
+
+  // Determine generationIndex for each child using their parent anchors (approximation):
+  // In the DOM builder we don't have explicit levels; use the vertical position bucket as generation.
+  // Bucket height chosen to be ~180px (box height + gap). This provides per-row grouping.
+  const bucketH = 180;
+  const generationIndexForY = (y: number) => Math.max(0, Math.floor(y / bucketH));
+
+  // Prepare per-family per-generation per-hub palette index tracking
+  const colorIndexByFamilyLevelHub = new Map<string, number>();
+  const hubOrderByFamilyLevel = new Map<string, Map<string, number>>(); // key: family:level -> (hubKey -> order)
 
   for (const child of childRects){
     const motherId = child.motherId || '';
@@ -48,43 +76,34 @@ export function buildConnections(input: BuildConnectionsInput): BuiltConnections
     const y2 = c.top - baseRect.top;
     const mother = memberById.get(motherId);
     const father = fatherId ? memberById.get(fatherId) : undefined;
-    let color = '#999';
-    if (father && father.gender==='male'){
-      const fatherWives = (spousesByMember[father.id!]||[]).filter(s=> s.gender==='female');
-      if (fatherWives.length > 1 && mother){
-        const key = father.id! + '|' + mother.id!;
-        if (!colorFatherMotherPair.has(key)){
-          const idx = colorFatherMotherPair.size % colors.length;
-          colorFatherMotherPair.set(key, colors[idx]);
-        }
-        color = colorFatherMotherPair.get(key)!;
-      } else if (mother) {
-        const motherHusbands = (spousesByMember[mother.id!]||[]).filter(s=> s.gender==='male');
-        if (motherHusbands.length > 1){
-          const key2 = mother.id! + '|' + father.id!;
-          if (!colorMotherFatherPair.has(key2)){
-            const idx2 = colorMotherFatherPair.size % colors.length;
-            colorMotherFatherPair.set(key2, colors[idx2]);
-          }
-          color = colorMotherFatherPair.get(key2)!;
-        } else {
-          color = '#1976d2';
-        }
-      } else {
-        color = '#1976d2';
+    // Per-family, per-generation, per-hub rule
+    let color = NEUTRAL_COLOR;
+    const familyId = mother?.family || father?.family;
+    if (familyId && mother?.id){
+      if (!MOTHER_COLOR_MAP_BY_FAMILY_LEVEL_HUB.has(familyId)) MOTHER_COLOR_MAP_BY_FAMILY_LEVEL_HUB.set(familyId, new Map<number, Map<string, Map<string,string>>>());
+      const levelIndex = generationIndexForY(y1); // parent bottom Y as generation marker
+      const byLevel = MOTHER_COLOR_MAP_BY_FAMILY_LEVEL_HUB.get(familyId)!;
+      if (!byLevel.has(levelIndex)) byLevel.set(levelIndex, new Map<string, Map<string,string>>());
+      const byHub = byLevel.get(levelIndex)!;
+      const hubKey = anchorId || 'unknown-hub';
+      if (!byHub.has(hubKey)) byHub.set(hubKey, new Map<string,string>());
+      const levelHubMap = byHub.get(hubKey)!;
+      if (!levelHubMap.has(mother.id!)){
+        const key = `${familyId}:${levelIndex}:${hubKey}`;
+        const startIdx = colorIndexByFamilyLevelHub.get(key) || 0;
+        const orderKey = `${familyId}:${levelIndex}`;
+        if (!hubOrderByFamilyLevel.has(orderKey)) hubOrderByFamilyLevel.set(orderKey, new Map<string, number>());
+        const orderMap = hubOrderByFamilyLevel.get(orderKey)!;
+        if (!orderMap.has(hubKey)) orderMap.set(hubKey, orderMap.size);
+        const hubOrder = orderMap.get(hubKey)!;
+        const baseCount = Math.max(BASE_PALETTE.length, startIdx + 6);
+        const next = startIdx < BASE_PALETTE.length
+          ? BASE_PALETTE[(startIdx + hubOrder) % BASE_PALETTE.length]
+          : hslColor(startIdx + hubOrder, baseCount);
+        levelHubMap.set(mother.id!, next);
+        colorIndexByFamilyLevelHub.set(key, startIdx + 1);
       }
-    } else if (mother){
-      const motherHusbands = (spousesByMember[mother.id!]||[]).filter(s=> s.gender==='male');
-      if (motherHusbands.length > 1 && father){
-        const key2 = mother.id! + '|' + father.id!;
-        if (!colorMotherFatherPair.has(key2)){
-          const idx2 = colorMotherFatherPair.size % colors.length;
-          colorMotherFatherPair.set(key2, colors[idx2]);
-        }
-        color = colorMotherFatherPair.get(key2)!;
-      } else {
-        color = mother.gender==='female' ? '#d81b60' : '#1976d2';
-      }
+      color = levelHubMap.get(mother.id!)!;
     }
     if (style === 'diagonal'){
       minX = Math.min(minX, x1, x2); maxX = Math.max(maxX, x1, x2);

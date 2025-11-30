@@ -1,20 +1,20 @@
 import type { Member } from '../../models/member.model';
 
 // Builds generational levels from a root member.
-// Keeps ordering of siblings by descending DOB and groups children by mothers (root wives or female spouses).
+// Keeps ordering of siblings by ascending DOB and groups children by mothers (root wives or female spouses).
 export function buildLevels(members: Member[], root: Member, spousesByMember: Record<string, Member[]>, femaleFirst = false): Member[][] {
   const levels: Member[][] = [];
   const visited = new Set<string>();
   const getFemaleSpouses = (m: Member) => (spousesByMember[m.id!]||[]).filter(s=> s.gender==='female');
-  const sortByDobDesc = (arr: Member[]) => arr.sort((a,b)=>{
-    const da = a.dob ? new Date(a.dob as any).getTime() : 0;
-    const db = b.dob ? new Date(b.dob as any).getTime() : 0;
-    return db - da;
+  const sortByDobAsc = (arr: Member[]) => arr.sort((a,b)=>{
+    const da = a.dob ? new Date(a.dob as any).getTime() : Number.POSITIVE_INFINITY;
+    const db = b.dob ? new Date(b.dob as any).getTime() : Number.POSITIVE_INFINITY;
+    return da - db; // older first (left), unknowns to the right
   });
   // Generation 2: children of root (father match OR mother is one of root wives)
   const rootWives = getFemaleSpouses(root).map(w=> w.id!);
   let current: Member[] = members.filter(m=> m.father===root.id || (m.mother && rootWives.includes(m.mother)));
-  sortByDobDesc(current);
+  sortByDobAsc(current);
   current.forEach(c=> visited.add(c.id!));
   if (current.length) levels.push(current);
   while (current.length){
@@ -26,7 +26,7 @@ export function buildLevels(members: Member[], root: Member, spousesByMember: Re
       for (const mid of mothers){
         const kids = members.filter(m=> m.mother===mid && !visited.has(m.id!));
         if (kids.length){
-          sortByDobDesc(kids);
+          sortByDobAsc(kids);
           kids.forEach(k=> { visited.add(k.id!); nextOrdered.push(k); });
         }
       }
