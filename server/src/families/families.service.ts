@@ -5,12 +5,14 @@ import { Family, FamilyDocument } from './schemas/family.schema';
 import { CreateFamilyDto } from './dto/create-family.dto';
 import { UpdateFamilyDto } from './dto/update-family.dto';
 import { Member } from '../members/schemas/member.schema';
+import { AuthUser, PermissionsService } from '../auth/permissions.service';
 
 @Injectable()
 export class FamiliesService {
 	constructor(
 		@InjectModel(Family.name) private familyModel: Model<FamilyDocument>,
 		@InjectModel(Member.name) private memberModel: Model<Member>,
+		private permissionsService: PermissionsService,
 	) {}
 
 	private async validateRootMember(dto: { rootMember?: string; idForUpdate?: string }) {
@@ -41,8 +43,18 @@ export class FamiliesService {
 			return created;
 		}
 
-	async findAll(): Promise<Family[]> {
-		return this.familyModel.find().exec();
+	async findAll(currentUser: AuthUser): Promise<Family[]> {
+		const familyIds = this.permissionsService.getAccessibleFamilyIds(currentUser);
+		if (familyIds === null) {
+			// GIAM_DOC - xem tất cả
+			return this.familyModel.find().exec();
+		}
+		if (familyIds.length === 0) {
+			// Không có quyền truy cập family nào
+			return [];
+		}
+		// Filter theo families được phép
+		return this.familyModel.find({ _id: { $in: familyIds } }).exec();
 	}
 
 	async findOne(id: string): Promise<Family> {

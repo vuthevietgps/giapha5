@@ -8,6 +8,7 @@ import { Family } from '../families/schemas/family.schema';
 import { hash } from 'bcryptjs';
 import { AuditService } from '../audit/audit.service';
 import { Union } from '../unions/schemas/union.schema';
+import { AuthUser, PermissionsService } from '../auth/permissions.service';
 
 @Injectable()
 export class MembersService {
@@ -16,6 +17,7 @@ export class MembersService {
     @InjectModel(Family.name) private readonly familyModel: Model<Family>,
     @InjectModel(Union.name) private readonly unionModel: Model<Union>,
     private readonly audit: AuditService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   private toObjectId(id: string) {
@@ -104,15 +106,33 @@ export class MembersService {
     }
   }
 
-  async findAll(params: { family?: string; q?: string }) {
+  async findAll(currentUser: AuthUser, params: { family?: string; q?: string }) {
     const filter: any = {};
+    
+    // Lọc theo families được phép truy cập
+    const accessibleFamilies = this.permissionsService.getAccessibleFamilyIds(currentUser);
+    if (accessibleFamilies !== null) {
+      // Không phải GIAM_DOC - cần filter
+      if (accessibleFamilies.length === 0) return []; // Không có quyền
+      
+      filter.$or = [
+        { family: { $in: accessibleFamilies.map(id => this.toObjectId(id)) } },
+        { family: { $in: accessibleFamilies } },
+      ];
+    }
+    
     if (params.family) {
+      // Nếu đã filter theo accessible families, kiểm tra xem family này có trong danh sách không
+      if (accessibleFamilies !== null && !accessibleFamilies.includes(params.family)) {
+        return []; // Không có quyền truy cập family này
+      }
       // Support legacy records where family was stored as string
       filter.$or = [
         { family: this.toObjectId(params.family) },
         { family: params.family },
       ];
     }
+    
     if (params.q) filter.fullName = { $regex: params.q, $options: 'i' };
     const list = await this.memberModel.find(filter).sort({ fullName: 1 }).exec();
     return list.map((d) => d.toJSON());
@@ -324,7 +344,12 @@ export class MembersService {
     return this.isDescendant(sourceId, targetId);
   }
 
-  async buildTree(familyId: string, rootId?: string) {
+  async buildTree(currentUser: AuthUser, familyId: string, rootId?: string) {
+    // Kiểm tra quyền truy cập family
+    if (!this.permissionsService.canAccessFamily(currentUser, familyId)) {
+      throw new NotFoundException('Bạn không có quyền truy cập dòng họ này');
+    }
+    
     const members = await this.memberModel
       .find({ $or: [{ family: this.toObjectId(familyId) }, { family: familyId }] })
       .lean()

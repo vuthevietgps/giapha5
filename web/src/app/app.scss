@@ -1,0 +1,216 @@
+:host {
+  display: block;
+}
+
+.app-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+// Mobile Toolbar
+.mobile-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: #fff;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  
+  .toolbar-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 18px;
+    
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+  
+  .spacer {
+    flex: 1;
+  }
+
+  button mat-icon {
+    color: #fff;
+  }
+}
+
+// Sidebar
+.app-sidenav {
+  width: 260px;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+  
+  .sidenav-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+    
+    mat-icon {
+      color: #1976d2;
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+    
+    strong {
+      font-size: 16px;
+      color: #333;
+    }
+  }
+  
+  .nav-list {
+    padding-top: 8px;
+    padding-bottom: 80px; // Space for footer on desktop
+    
+    a {
+      transition: all 0.3s ease;
+      
+      &.active {
+        background-color: rgba(25, 118, 210, 0.12);
+        color: #1976d2;
+        border-right: 3px solid #1976d2;
+        
+        mat-icon {
+          color: #1976d2;
+        }
+      }
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+    }
+  }
+  
+  .sidenav-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    border-top: 1px solid #e0e0e0;
+    background: #fafafa;
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      
+      mat-icon {
+        color: #1976d2;
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+      
+      span {
+        font-weight: 500;
+        color: #333;
+        font-size: 14px;
+      }
+    }
+    
+    button {
+      width: 100%;
+      border-radius: 8px;
+      
+      mat-icon {
+        margin-right: 8px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
+// Content Area
+.app-content {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: #f5f5f5;
+}
+
+// User Menu (Mobile)
+.user-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
+  
+  mat-icon {
+    color: white;
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+  }
+  
+  span {
+    font-weight: 600;
+    font-size: 16px;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 959px) {
+  .mobile-toolbar {
+    display: flex !important;
+  }
+  
+  .app-content {
+    padding-top: 56px; // Height of mobile toolbar
+  }
+  
+  .app-sidenav {
+    .nav-list {
+      padding-bottom: 16px; // No footer on mobile
+    }
+    
+    .sidenav-footer {
+      display: none; // Ẩn footer trên mobile
+    }
+  }
+}
+
+@media (min-width: 960px) {
+  .mobile-toolbar {
+    display: none !important;
+  }
+  
+  .app-sidenav {
+    .sidenav-footer {
+      display: block; // Hiện footer trên desktop
+    }
+  }
+}
+
+// Smooth transitions
+mat-sidenav-container {
+  transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+mat-sidenav {
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}

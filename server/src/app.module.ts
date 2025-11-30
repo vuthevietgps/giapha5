@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -11,11 +11,14 @@ import { UnionsModule } from './unions/unions.module';
 import { AuditModule } from './audit/audit.module';
 import { PostsModule } from './posts/posts.module';
 import { BackgroundsModule } from './backgrounds/backgrounds.module';
+import { AuthModule } from './auth/auth.module';
+import { AuthMiddleware } from './auth/middleware/auth.middleware';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/giapha'),
+    AuthModule,
     UsersModule,
     FamiliesModule,
     PositionsModule,
@@ -28,4 +31,10 @@ import { BackgroundsModule } from './backgrounds/backgrounds.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(AuthMiddleware)
+      .forRoutes('*'); // Áp dụng cho tất cả routes
+  }
+}

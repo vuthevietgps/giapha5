@@ -5,7 +5,7 @@ export type ConnectionStyle = 'diagonal' | 'hub';
 export interface BuildConnectionsInput {
   baseRect: DOMRect;
   anchorRects: Map<string, DOMRect>; // id -> rect for spouse anchors
-  childRects: Array<{ elRect: DOMRect; motherId?: string; fatherId?: string }>; // child person boxes
+  childRects: Array<{ elRect: DOMRect; childId?: string; motherId?: string; fatherId?: string }>; // child person boxes
   memberById: Map<string, Member>;
   spousesByMember: Record<string, Member[]>;
   style: ConnectionStyle;
@@ -18,6 +18,7 @@ export interface BuiltConnections {
   connections: Array<{ x1:number;y1:number;x2:number;y2:number;color:string }>;
   overlayW: number;
   overlayH: number;
+  childColors: Record<string, string>; // childId -> connection color
 }
 
 // Per-family + per-generation + hub motherId -> color mapping
@@ -44,6 +45,7 @@ export function buildConnections(input: BuildConnectionsInput): BuiltConnections
   type Piece = { anchorId: string; x1:number; y1:number; x2:number; y2:number; color:string };
   const connsRaw: Conn[] = [];
   const piecesByAnchor = new Map<string, Piece[]>();
+  const childColors: Record<string, string> = {}; // Store child ID -> color mapping
   let minX = 0, minY = 0, maxX = 0, maxY = 0;
 
   // Determine generationIndex for each child using their parent anchors (approximation):
@@ -105,6 +107,10 @@ export function buildConnections(input: BuildConnectionsInput): BuiltConnections
       }
       color = levelHubMap.get(mother.id!)!;
     }
+    // Store child color for border styling
+    if (child.childId) {
+      childColors[child.childId] = color;
+    }
     if (style === 'diagonal'){
       minX = Math.min(minX, x1, x2); maxX = Math.max(maxX, x1, x2);
       minY = Math.min(minY, y1, y2); maxY = Math.max(maxY, y1, y2);
@@ -143,5 +149,5 @@ export function buildConnections(input: BuildConnectionsInput): BuiltConnections
   const connections = connsRaw.map(c=> ({ ...c, x1: c.x1 + offX, x2: c.x2 + offX, y1: c.y1 + offY, y2: c.y2 + offY }));
   const overlayW = Math.max(baseRect.width, (maxX - Math.min(0, minX)) + 40);
   const overlayH = Math.max(baseRect.height, (maxY - Math.min(0, minY)) + 120);
-  return { connections, overlayW, overlayH };
+  return { connections, overlayW, overlayH, childColors };
 }

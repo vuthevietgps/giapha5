@@ -1,0 +1,352 @@
+<div class="landing-page">
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="nav-brand">
+        <mat-icon class="brand-icon">account_tree</mat-icon>
+        <span class="brand-name">Gia Phả Số</span>
+      </div>
+      <div class="nav-links">
+        <button mat-button (click)="scrollToSection('features')">Tính năng</button>
+        <button mat-button (click)="scrollToSection('pricing')">Bảng giá</button>
+        <button mat-button (click)="scrollToSection('about')">Giới thiệu</button>
+        <button mat-button (click)="scrollToSection('contact')">Liên hệ</button>
+        <button mat-raised-button color="primary" routerLink="/login">Đăng nhập</button>
+      </div>
+      <div class="mobile-actions">
+        <button mat-icon-button routerLink="/login" class="mobile-login-btn">
+          <mat-icon>login</mat-icon>
+        </button>
+        <button mat-icon-button class="menu-toggle" (click)="toggleMobileMenu()">
+          <mat-icon>{{mobileMenuOpen ? 'close' : 'menu'}}</mat-icon>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" [class.open]="mobileMenuOpen">
+      <button mat-button (click)="scrollToSection('features')">
+        <mat-icon>star</mat-icon>
+        Tính năng
+      </button>
+      <button mat-button (click)="scrollToSection('pricing')">
+        <mat-icon>payments</mat-icon>
+        Bảng giá
+      </button>
+      <button mat-button (click)="scrollToSection('about')">
+        <mat-icon>info</mat-icon>
+        Giới thiệu
+      </button>
+      <button mat-button (click)="scrollToSection('contact')">
+        <mat-icon>contact_mail</mat-icon>
+        Liên hệ
+      </button>
+      <button mat-raised-button color="primary" routerLink="/login" (click)="toggleMobileMenu()">
+        <mat-icon>login</mat-icon>
+        Đăng nhập
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-background">
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="container hero-content">
+      <div class="hero-text">
+        <h1 class="hero-title animate-fade-in">
+          Chuyển Đổi Số <br>
+          <span class="highlight">Gia Phả Việt</span>
+        </h1>
+        <p class="hero-subtitle animate-fade-in-delay">
+          Bảo tồn di sản dòng họ - Kết nối thế hệ tương lai
+        </p>
+        <p class="hero-description animate-fade-in-delay-2">
+          Giải pháp số hóa gia phả hiện đại, dễ dàng quản lý và chia sẻ thông tin dòng họ trên nền tảng trực tuyến
+        </p>
+        <div class="hero-actions animate-fade-in-delay-3">
+          <button mat-raised-button color="primary" class="cta-primary" (click)="scrollToSection('pricing')">
+            <mat-icon>rocket_launch</mat-icon>
+            Trải nghiệm ngay
+          </button>
+          <button mat-stroked-button class="cta-secondary" (click)="scrollToSection('features')">
+            <mat-icon>info</mat-icon>
+            Tìm hiểu thêm
+          </button>
+        </div>
+      </div>
+      <div class="hero-image animate-slide-in">
+        <div class="tree-illustration">
+          <mat-icon class="tree-icon">account_tree</mat-icon>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-indicator">
+      <mat-icon>keyboard_arrow_down</mat-icon>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Tính năng nổi bật</h2>
+        <p class="section-subtitle">
+          Những công cụ mạnh mẽ giúp bạn quản lý gia phả hiệu quả
+        </p>
+      </div>
+      <div class="features-grid">
+        <mat-card class="feature-card" *ngFor="let feature of features">
+          <div class="feature-icon">
+            <mat-icon>{{feature.icon}}</mat-icon>
+          </div>
+          <h3 class="feature-title">{{feature.title}}</h3>
+          <p class="feature-description">{{feature.description}}</p>
+        </mat-card>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section id="pricing" class="pricing">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Bảng giá dịch vụ</h2>
+        <p class="section-subtitle">
+          Chọn gói phù hợp với quy mô dòng họ của bạn
+        </p>
+      </div>
+      <div class="pricing-grid">
+        <mat-card class="pricing-card" *ngFor="let plan of pricingPlans" [class.recommended]="plan.recommended">
+          <div class="recommended-badge" *ngIf="plan.recommended">
+            <mat-icon>star</mat-icon>
+            Phổ biến nhất
+          </div>
+          <div class="pricing-header">
+            <h3 class="plan-name">{{plan.name}}</h3>
+            <div class="plan-price">
+              <span class="price">{{plan.price}}</span>
+              <span class="period">/{{plan.period}}</span>
+            </div>
+            <div class="original-price" *ngIf="plan.originalPrice">
+              Giá gốc: <del>{{plan.originalPrice}}</del>
+            </div>
+          </div>
+          <div class="pricing-features">
+            <div class="feature-item" *ngFor="let feature of plan.features">
+              <mat-icon>check_circle</mat-icon>
+              <span>{{feature}}</span>
+            </div>
+          </div>
+          <button mat-raised-button 
+                  [color]="plan.recommended ? 'primary' : 'accent'" 
+                  class="plan-cta"
+                  (click)="selectPlan(plan)">
+            {{plan.ctaText}}
+          </button>
+        </mat-card>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="about">
+    <div class="container">
+      <div class="about-content">
+        <div class="about-image">
+          <div class="image-placeholder">
+            <mat-icon>family_restroom</mat-icon>
+          </div>
+        </div>
+        <div class="about-text">
+          <h2 class="section-title">Bảo tồn di sản dòng họ</h2>
+          <p class="about-description">
+            <strong>Gia phả</strong> là sợi dây kết nối giữa hiện tại và quá khứ, nơi lưu trữ lịch sử và văn hóa của dòng họ. 
+            Giúp con cháu hiểu hơn về nguồn gốc và công đức của tổ tiên.
+          </p>
+          <p class="about-description">
+            Với hơn <strong>10 năm kinh nghiệm</strong> trong lĩnh vực công nghệ và văn hóa Việt Nam, chúng tôi mang đến giải pháp 
+            <strong>Chuyển đổi số Gia phả</strong> hiện đại nhất, giúp các dòng họ dễ dàng số hóa, lưu trữ và chia sẻ thông tin 
+            qua các thế hệ.
+          </p>
+          <div class="about-features">
+            <div class="about-feature">
+              <mat-icon>verified</mat-icon>
+              <div>
+                <h4>Đơn giản & Dễ sử dụng</h4>
+                <p>Giao diện thân thiện, không cần kiến thức chuyên môn</p>
+              </div>
+            </div>
+            <div class="about-feature">
+              <mat-icon>support_agent</mat-icon>
+              <div>
+                <h4>Hỗ trợ tận tình</h4>
+                <p>Đội ngũ tư vấn nhiệt tình, sẵn sàng hỗ trợ 24/7</p>
+              </div>
+            </div>
+            <div class="about-feature">
+              <mat-icon>workspace_premium</mat-icon>
+              <div>
+                <h4>Chất lượng đảm bảo</h4>
+                <p>Được hàng trăm dòng họ tin dùng trên cả nước</p>
+              </div>
+            </div>
+          </div>
+          <button mat-raised-button color="primary" class="learn-more" (click)="scrollToSection('contact')">
+            <mat-icon>contact_support</mat-icon>
+            Liên hệ tư vấn
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Statistics Section -->
+  <section class="statistics">
+    <div class="container">
+      <h2 class="section-title text-center">Những con số ấn tượng</h2>
+      <div class="stats-grid">
+        <div class="stat-item" *ngFor="let stat of statistics">
+          <mat-icon class="stat-icon">{{stat.icon}}</mat-icon>
+          <div class="stat-number">{{stat.number}}</div>
+          <div class="stat-label">{{stat.label}}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contact" class="contact">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Liên hệ với chúng tôi</h2>
+        <p class="section-subtitle">
+          Để lại thông tin, chúng tôi sẽ liên hệ tư vấn miễn phí
+        </p>
+      </div>
+      <div class="contact-content">
+        <div class="contact-form">
+          <mat-card>
+            <form (ngSubmit)="submitContact()">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Họ và tên</mat-label>
+                <input matInput [(ngModel)]="contactForm.name" name="name" required>
+                <mat-icon matPrefix>person</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Email</mat-label>
+                <input matInput type="email" [(ngModel)]="contactForm.email" name="email" required>
+                <mat-icon matPrefix>email</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Số điện thoại</mat-label>
+                <input matInput [(ngModel)]="contactForm.phone" name="phone" required>
+                <mat-icon matPrefix>phone</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Nội dung</mat-label>
+                <textarea matInput [(ngModel)]="contactForm.message" name="message" rows="4"></textarea>
+                <mat-icon matPrefix>message</mat-icon>
+              </mat-form-field>
+
+              <button mat-raised-button color="primary" type="submit" class="submit-btn">
+                <mat-icon>send</mat-icon>
+                Gửi thông tin
+              </button>
+            </form>
+          </mat-card>
+        </div>
+        <div class="contact-info">
+          <mat-card class="info-card">
+            <div class="info-item">
+              <mat-icon>location_on</mat-icon>
+              <div>
+                <h4>Địa chỉ</h4>
+                <p>Hà Nội, Việt Nam</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <mat-icon>phone</mat-icon>
+              <div>
+                <h4>Điện thoại</h4>
+                <p>0123 456 789</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <mat-icon>email</mat-icon>
+              <div>
+                <h4>Email</h4>
+                <p>info@giaphaso.vn</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <mat-icon>schedule</mat-icon>
+              <div>
+                <h4>Giờ làm việc</h4>
+                <p>Thứ 2 - Thứ 6: 8:00 - 17:00</p>
+                <p>Thứ 7: 8:00 - 12:00</p>
+              </div>
+            </div>
+          </mat-card>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <div class="footer-brand">
+            <mat-icon>account_tree</mat-icon>
+            <span>Gia Phả Số</span>
+          </div>
+          <p class="footer-description">
+            Giải pháp chuyển đổi số gia phả hiện đại, 
+            kết nối và bảo tồn di sản văn hóa dòng họ Việt.
+          </p>
+        </div>
+        <div class="footer-section">
+          <h4>Liên kết nhanh</h4>
+          <ul class="footer-links">
+            <li><a (click)="scrollToSection('features')">Tính năng</a></li>
+            <li><a (click)="scrollToSection('pricing')">Bảng giá</a></li>
+            <li><a (click)="scrollToSection('about')">Giới thiệu</a></li>
+            <li><a (click)="scrollToSection('contact')">Liên hệ</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Hỗ trợ</h4>
+          <ul class="footer-links">
+            <li><a href="#">Hướng dẫn sử dụng</a></li>
+            <li><a href="#">Câu hỏi thường gặp</a></li>
+            <li><a href="#">Chính sách bảo mật</a></li>
+            <li><a href="#">Điều khoản sử dụng</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Kết nối với chúng tôi</h4>
+          <div class="social-links">
+            <button mat-icon-button>
+              <mat-icon>facebook</mat-icon>
+            </button>
+            <button mat-icon-button>
+              <mat-icon>mail</mat-icon>
+            </button>
+            <button mat-icon-button>
+              <mat-icon>phone</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 Gia Phả Số. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</div>

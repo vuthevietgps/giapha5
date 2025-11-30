@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,7 @@ import type { Family } from '../../models/family.model';
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    RouterModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -23,7 +24,7 @@ import type { Family } from '../../models/family.model';
     MatSnackBarModule,
   ],
   templateUrl: './family-form.html',
-  styleUrl: './family-form.scss',
+  styleUrls: ['./family-form.scss']
 })
 export class FamilyForm implements OnInit {
   private readonly fb = inject(FormBuilder);

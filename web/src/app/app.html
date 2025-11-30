@@ -1,56 +1,146 @@
-<mat-sidenav-container class="app-shell" style="height: 100vh;">
-	<mat-sidenav mode="side" opened style="width: 260px;">
-		<div style="display:flex; align-items:center; gap:8px; padding: 16px;">
-			<mat-icon>account_tree</mat-icon>
-			<strong>Gia Phả Online version1</strong>
-		</div>
-		<mat-nav-list>
-			<a mat-list-item routerLink="/users" routerLinkActive="active">
-				<mat-icon matListItemIcon>group</mat-icon>
-				<span matListItemTitle>Người dùng</span>
-			</a>
-			<a mat-list-item routerLink="/families" routerLinkActive="active">
-				<mat-icon matListItemIcon>diversity_3</mat-icon>
-				<span matListItemTitle>Dòng họ</span>
-			</a>
-			<a mat-list-item routerLink="/positions" routerLinkActive="active">
-				<mat-icon matListItemIcon>badge</mat-icon>
-				<span matListItemTitle>Chức vụ</span>
-			</a>
-			<a mat-list-item routerLink="/members" routerLinkActive="active">
-				<mat-icon matListItemIcon>person</mat-icon>
-				<span matListItemTitle>Thành viên</span>
-			</a>
-			<a mat-list-item routerLink="/members/tree" routerLinkActive="active">
-				<mat-icon matListItemIcon>account_tree</mat-icon>
-				<span matListItemTitle>Cây gia phả</span>
-			</a>
-			<a mat-list-item routerLink="/members/branch" routerLinkActive="active">
-				<mat-icon matListItemIcon>format_list_bulleted</mat-icon>
-				<span matListItemTitle>Nhánh quan tâm</span>
-			</a>
-			<a mat-list-item routerLink="/backgrounds" routerLinkActive="active">
-				<mat-icon matListItemIcon>image</mat-icon>
-				<span matListItemTitle>Ảnh nền</span>
-			</a>
-			<a mat-list-item routerLink="/calendar" routerLinkActive="active">
-				<mat-icon matListItemIcon>calendar_month</mat-icon>
-				<span matListItemTitle>Lịch vạn niên</span>
-			</a>
-			<a mat-list-item routerLink="/members/branch-calendar" routerLinkActive="active">
-				<mat-icon matListItemIcon>event</mat-icon>
-				<span matListItemTitle>Lịch quan trọng</span>
-			</a>
-			<a mat-list-item routerLink="/posts" routerLinkActive="active">
-				<mat-icon matListItemIcon>article</mat-icon>
-				<span matListItemTitle>Bài viết</span>
-			</a>
-			<!-- Member tree menu -->
-			<!-- Có thể thêm các menu khác sau này -->
-		</mat-nav-list>
-	</mat-sidenav>
+<!-- Layout với sidebar chỉ khi đã đăng nhập -->
 
-	<mat-sidenav-content>
-		<router-outlet />
-	</mat-sidenav-content>
-</mat-sidenav-container>
+<ng-container *ngIf="isAuthenticated; else publicLayout">
+	<!-- Mobile Toolbar đặt ngoài sidenav-container để chắc chắn hiển thị trên mọi thiết bị -->
+	<mat-toolbar class="mobile-toolbar" color="primary">
+		<button mat-icon-button (click)="toggleSidenav()">
+			<mat-icon>menu</mat-icon>
+		</button>
+		<span class="toolbar-title">
+			<mat-icon>account_tree</mat-icon>
+			Gia Phả Số
+		</span>
+		<span class="spacer"></span>
+		<button mat-icon-button [matMenuTriggerFor]="userMenu">
+			<mat-icon>account_circle</mat-icon>
+		</button>
+		<mat-menu #userMenu="matMenu">
+			<div class="user-menu-header">
+				<mat-icon>person</mat-icon>
+				<span>{{currentUser?.username}}</span>
+			</div>
+			<button mat-menu-item (click)="logout()">
+				<mat-icon>logout</mat-icon>
+				<span>Đăng xuất</span>
+			</button>
+		</mat-menu>
+	</mat-toolbar>
+
+	<mat-sidenav-container class="app-shell">
+		<!-- Sidebar -->
+		<mat-sidenav 
+			#drawer
+			[mode]="sidenavMode()" 
+			[opened]="sidenavOpened()" 
+			class="app-sidenav">
+			<div class="sidenav-header">
+				<mat-icon>account_tree</mat-icon>
+				<strong>Gia Phả Số</strong>
+			</div>
+			
+			<mat-nav-list class="nav-list">
+				<a mat-list-item 
+				   routerLink="/users" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('users', 'read')">
+					<mat-icon matListItemIcon>group</mat-icon>
+					<span matListItemTitle>Người dùng</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/families" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('families', 'read')">
+					<mat-icon matListItemIcon>diversity_3</mat-icon>
+					<span matListItemTitle>Dòng họ</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/positions" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('positions', 'read')">
+					<mat-icon matListItemIcon>badge</mat-icon>
+					<span matListItemTitle>Chức vụ</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/members" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('members', 'read')">
+					<mat-icon matListItemIcon>person</mat-icon>
+					<span matListItemTitle>Thành viên</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/members/tree" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('tree', 'read')">
+					<mat-icon matListItemIcon>account_tree</mat-icon>
+					<span matListItemTitle>Cây gia phả</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/members/branch" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('branch', 'read')">
+					<mat-icon matListItemIcon>format_list_bulleted</mat-icon>
+					<span matListItemTitle>Nhánh quan tâm</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/backgrounds" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('backgrounds', 'read')">
+					<mat-icon matListItemIcon>image</mat-icon>
+					<span matListItemTitle>Ảnh nền</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/calendar" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('calendar', 'read')">
+					<mat-icon matListItemIcon>calendar_month</mat-icon>
+					<span matListItemTitle>Lịch vạn niên</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/members/branch-calendar" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('branchCalendar', 'read')">
+					<mat-icon matListItemIcon>event</mat-icon>
+					<span matListItemTitle>Lịch quan trọng</span>
+				</a>
+				<a mat-list-item 
+				   routerLink="/posts" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()"
+				   *ngIf="permissionService.can('posts', 'read')">
+					<mat-icon matListItemIcon>article</mat-icon>
+					<span matListItemTitle>Bài viết</span>
+				</a>
+			</mat-nav-list>
+			
+			<!-- User info và logout ở cuối sidebar (chỉ desktop) -->
+			<div class="sidenav-footer">
+				<div class="user-info">
+					<mat-icon>account_circle</mat-icon>
+					<span>{{currentUser?.username}}</span>
+				</div>
+				<button mat-stroked-button color="warn" (click)="logout()">
+					<mat-icon>logout</mat-icon>
+					Đăng xuất
+				</button>
+			</div>
+		</mat-sidenav>
+
+		<mat-sidenav-content class="app-content">
+			<router-outlet />
+		</mat-sidenav-content>
+	</mat-sidenav-container>
+</ng-container>
+
+<!-- Layout công khai không có sidebar -->
+<ng-template #publicLayout>
+	<router-outlet />
+</ng-template>

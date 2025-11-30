@@ -1,0 +1,60 @@
+<div class="login-container">
+  <div class="login-card-wrapper">
+    <mat-card class="login-card">
+      <div class="login-header">
+        <mat-icon class="logo-icon">account_tree</mat-icon>
+        <h1>Gia Phả Số</h1>
+        <p class="subtitle">Đăng nhập để quản lý</p>
+      </div>
+
+      <form (ngSubmit)="login()" class="login-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Tên đăng nhập</mat-label>
+          <input matInput 
+                 [(ngModel)]="username" 
+                 name="username" 
+                 required
+                 autocomplete="username">
+          <mat-icon matPrefix>person</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Mật khẩu</mat-label>
+          <input matInput 
+                 [type]="hidePassword ? 'password' : 'text'"
+                 [(ngModel)]="password" 
+                 name="password" 
+                 required
+                 autocomplete="current-password">
+          <mat-icon matPrefix>lock</mat-icon>
+          <button mat-icon-button 
+                  matSuffix 
+                  type="button"
+                  (click)="hidePassword = !hidePassword">
+            <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <div class="error-message" *ngIf="errorMessage">
+          <mat-icon>error</mat-icon>
+          <span>{{errorMessage}}</span>
+        </div>
+
+        <button mat-raised-button 
+                color="primary" 
+                type="submit" 
+                class="login-button">
+          <mat-icon>login</mat-icon>
+          Đăng nhập
+        </button>
+
+        <div class="login-footer">
+          <a href="/" class="back-link">
+            <mat-icon>arrow_back</mat-icon>
+            Quay về trang chủ
+          </a>
+        </div>
+      </form>
+    </mat-card>
+  </div>
+</div>

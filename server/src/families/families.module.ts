@@ -4,6 +4,7 @@ import { FamiliesService } from './families.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Family, FamilySchema } from './schemas/family.schema';
 import { Member, MemberSchema } from '../members/schemas/member.schema';
+import { PermissionsService } from '../auth/permissions.service';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { Member, MemberSchema } from '../members/schemas/member.schema';
     ]),
   ],
   controllers: [FamiliesController],
-  providers: [FamiliesService]
+  providers: [FamiliesService, PermissionsService]
 })
 export class FamiliesModule {}

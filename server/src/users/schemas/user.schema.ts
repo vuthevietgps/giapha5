@@ -7,6 +7,7 @@ export enum UserRole {
   GIAM_DOC = 'GIAM_DOC',
   QUAN_LY = 'QUAN_LY',
   NHAN_VIEN = 'NHAN_VIEN',
+  TRUONG_HO = 'TRUONG_HO',
 }
 
 @Schema({ timestamps: true })
@@ -22,6 +23,12 @@ export class User {
 
   @Prop({ required: true, enum: UserRole, default: UserRole.NHAN_VIEN })
   role: UserRole;
+
+  @Prop({ type: [{ type: String, ref: 'Family' }], default: [] })
+  managedFamilies: string[]; // Cho QUAN_LY: danh sách dòng họ được quản lý
+
+  @Prop({ type: String, ref: 'Family' })
+  assignedFamily?: string; // Cho NHAN_VIEN và TRUONG_HO: dòng họ được chỉ định
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

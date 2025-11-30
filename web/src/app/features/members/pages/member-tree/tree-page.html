@@ -49,6 +49,17 @@
       <button mat-stroked-button (click)="openBackgrounds()"><mat-icon>image</mat-icon> Ảnh nền</button>
       <button mat-stroked-button (click)="computeConnections()">Vẽ đường nối</button>
       <button mat-stroked-button (click)="centerRoot()">Canh giữa</button>
+      <button mat-stroked-button [matMenuTriggerFor]="exportMenu"><mat-icon>download</mat-icon> Tải xuống</button>
+      <mat-menu #exportMenu="matMenu">
+        <button mat-menu-item (click)="exportToPNG('A4')">
+          <mat-icon>description</mat-icon>
+          <span>Tải PNG A4 (210×297mm)</span>
+        </button>
+        <button mat-menu-item (click)="exportToPNG('A3')">
+          <mat-icon>description</mat-icon>
+          <span>Tải PNG A3 (297×420mm)</span>
+        </button>
+      </mat-menu>
       <button mat-button (click)="reload()"><mat-icon>refresh</mat-icon> Tải lại</button>
     </div>
     <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()"
@@ -78,7 +89,7 @@
               </div>
               </div>
               <div class="children" *ngFor="let level of levels; let li = index">
-              <div class="child-couple couple-box" *ngFor="let c of level" #childBox [ngStyle]="{'border-color': genderColor(c.gender)}">
+              <div class="child-couple couple-box" *ngFor="let c of level" #childBox [ngStyle]="{'border-color': childColors[c.id!] || genderColor(c.gender)}">
                 <div class="person child-person" [class.male]="c.gender==='male'" [class.female]="c.gender==='female'" #childEl [attr.data-id]="c.id" [attr.data-mother]="c.mother" [attr.data-father]="c.father" (contextmenu)="openContextMenu($event, c)">
                   <div class="name">{{c.fullName}}</div>
                   <div class="meta">{{c.dob | date:'yyyy-MM-dd'}}</div>

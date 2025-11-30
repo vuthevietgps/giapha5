@@ -10,9 +10,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatChipsModule } from '@angular/material/chips';
 import { UserService } from '../../services/user';
 import type { User } from '../../models/user.model';
 import { USER_ROLES, USER_ROLE_LABELS } from '../../models/user.model';
+import { FamilyService } from '../../../families/services/family';
+import { Family } from '../../../families/models/family.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-user-list',
@@ -29,18 +33,22 @@ import { USER_ROLES, USER_ROLE_LABELS } from '../../models/user.model';
     MatInputModule,
     MatSelectModule,
     MatToolbarModule,
+    MatChipsModule,
   ],
   templateUrl: './user-list.html',
   styleUrl: './user-list.scss',
 })
 export class UserList {
   private readonly userService = inject(UserService);
+  private readonly familyService = inject(FamilyService);
+  private readonly permissionService = inject(PermissionService);
   private readonly fb = inject(FormBuilder);
-  displayedColumns = ['fullName', 'email', 'role', 'actions'];
+  displayedColumns = ['fullName', 'email', 'role', 'families', 'actions'];
   data: User[] = [];
   filteredData: User[] = [];
   roles = USER_ROLES;
   roleLabels = USER_ROLE_LABELS;
+  familiesMap = new Map<string, Family>();
 
   filterForm = this.fb.group({
     q: [''],
@@ -48,7 +56,13 @@ export class UserList {
   });
 
   constructor() {
-    this.load();
+    // Load danh sách dòng họ trước
+    this.familyService.list().subscribe(families => {
+      families.forEach(f => {
+        if (f.id) this.familiesMap.set(f.id, f);
+      });
+      this.load();
+    });
     this.filterForm.valueChanges.subscribe(() => this.applyFilter());
   }
 
@@ -57,6 +71,21 @@ export class UserList {
       this.data = res;
       this.applyFilter();
     });
+  }
+
+  canManageUser(user: User): boolean {
+    return this.permissionService.canManageUser(user.role);
+  }
+
+  getFamilyNames(user: User): string[] {
+    if (user.role === 'QUAN_LY' && user.managedFamilies) {
+      return user.managedFamilies.map(fid => this.familiesMap.get(fid)?.name || fid);
+    }
+    if ((user.role === 'NHAN_VIEN' || user.role === 'TRUONG_HO') && user.assignedFamily) {
+      const family = this.familiesMap.get(user.assignedFamily);
+      return family ? [family.name] : [user.assignedFamily];
+    }
+    return [];
   }
 
   delete(id?: string) {

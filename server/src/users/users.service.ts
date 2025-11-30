@@ -4,11 +4,15 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AuthUser, PermissionsService } from '../auth/permissions.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
-	constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+	constructor(
+		@InjectModel(User.name) private userModel: Model<UserDocument>,
+		private permissionsService: PermissionsService,
+	) {}
 
 	async create(dto: CreateUserDto): Promise<User> {
 		try {
@@ -24,8 +28,9 @@ export class UsersService {
 		}
 	}
 
-	async findAll(): Promise<User[]> {
-		return this.userModel.find().exec();
+	async findAll(currentUser: AuthUser): Promise<User[]> {
+		const allUsers = await this.userModel.find().exec();
+		return this.permissionsService.filterUsers(currentUser, allUsers as any[]);
 	}
 
 	async findOne(id: string): Promise<User> {

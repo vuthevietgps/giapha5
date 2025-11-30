@@ -47,8 +47,6 @@ import { collectSubtree } from './tree-focus';
     FormsModule,
     MatInputModule,
     RouterModule,
-  // TreeSelectFatherDialog is opened dynamically (not declared in template)
-  TreeSelectFatherDialog,
   ],
   templateUrl: './tree-page.html',
   styles: [`
@@ -109,6 +107,7 @@ export class TreePage implements OnInit, AfterViewInit {
   spousesByMember: Record<string, Member[]> = {};
   private memberById: Map<string, Member> = new Map();
   connections: Array<{ x1:number;y1:number;x2:number;y2:number;color:string }> = [];
+  childColors: Record<string, string> = {}; // Store child box border colors from connections
   private wifeColor = new Map<string,string>();
   private readonly COLORS = ['#5B8FF9', '#5AD8A6', '#F6BD16', '#E86452', '#6DC8EC', '#9270CA'];
   coupleWidth: number | null = null;
@@ -474,11 +473,12 @@ export class TreePage implements OnInit, AfterViewInit {
       if (!id) return;
       anchorRects.set(id, el.nativeElement.getBoundingClientRect());
     });
-    const childRects: Array<{ elRect: DOMRect; motherId?: string; fatherId?: string }> = [];
+    const childRects: Array<{ elRect: DOMRect; childId?: string; motherId?: string; fatherId?: string }> = [];
     this.childEls?.forEach(el => {
+      const childId = el.nativeElement.getAttribute('data-id') || undefined;
       const motherId = el.nativeElement.getAttribute('data-mother') || undefined;
       const fatherId = el.nativeElement.getAttribute('data-father') || undefined;
-      childRects.push({ elRect: el.nativeElement.getBoundingClientRect(), motherId, fatherId });
+      childRects.push({ elRect: el.nativeElement.getBoundingClientRect(), childId, motherId, fatherId });
     });
     const result = buildConnections({
       baseRect,
@@ -492,6 +492,7 @@ export class TreePage implements OnInit, AfterViewInit {
       colorMotherFatherPair: this.colorMotherFatherPair,
     });
     this.connections = result.connections;
+    this.childColors = result.childColors;
     this.overlayW = result.overlayW;
     this.overlayH = result.overlayH;
   }
@@ -603,5 +604,102 @@ export class TreePage implements OnInit, AfterViewInit {
     if (ev.button === 2) return;
     // behave like anchor click: add child under mother
     await this.onAnchorClick(owner, spouse);
+  }
+
+  async exportToPNG(size: 'A4' | 'A3') {
+    const html2canvas = (await import('html2canvas')).default;
+    
+    // A4: 210mm x 297mm at 300 DPI = 2480 x 3508 pixels
+    // A3: 297mm x 420mm at 300 DPI = 3508 x 4961 pixels
+    const dimensions = {
+      A4: { width: 2480, height: 3508, name: 'A4' },
+      A3: { width: 3508, height: 4961, name: 'A3' }
+    };
+    
+    const { width, height, name } = dimensions[size];
+    
+    if (!this.canvasEl) {
+      this.snack.open('Không tìm thấy canvas', 'Đóng', { duration: 2000 });
+      return;
+    }
+
+    const canvas = this.canvasEl.nativeElement;
+    
+    try {
+      this.snack.open(`Đang tạo ảnh ${name}...`, undefined, { duration: 1000 });
+      
+      // Capture the canvas with high quality
+      const captured = await html2canvas(canvas, {
+        backgroundColor: this.backgroundUrl ? null : '#ffffff',
+        scale: 2, // Higher quality
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      // Create a new canvas with exact A4/A3 size
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = width;
+      finalCanvas.height = height;
+      const ctx = finalCanvas.getContext('2d');
+      
+      if (!ctx) return;
+
+      // Fill white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw background image if exists
+      if (this.backgroundUrl) {
+        try {
+          const bgImg = new Image();
+          bgImg.crossOrigin = 'anonymous';
+          await new Promise((resolve, reject) => {
+            bgImg.onload = resolve;
+            bgImg.onerror = reject;
+            bgImg.src = this.backgroundUrl!;
+          });
+          
+          // Draw background based on backgroundFit setting
+          if (this.backgroundFit === 'cover') {
+            const scale = Math.max(width / bgImg.width, height / bgImg.height);
+            const x = (width - bgImg.width * scale) / 2;
+            const y = (height - bgImg.height * scale) / 2;
+            ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
+          } else { // contain
+            const scale = Math.min(width / bgImg.width, height / bgImg.height);
+            const x = (width - bgImg.width * scale) / 2;
+            const y = (height - bgImg.height * scale) / 2;
+            ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
+          }
+        } catch (err) {
+          console.warn('Could not load background image:', err);
+        }
+      }
+
+      // Scale and center the tree content
+      const scale = Math.min(width / captured.width, height / captured.height) * 0.95; // 95% to add margins
+      const x = (width - captured.width * scale) / 2;
+      const y = (height - captured.height * scale) / 2 + (this.topOffset * scale);
+      
+      ctx.drawImage(captured, x, y, captured.width * scale, captured.height * scale);
+
+      // Convert to blob and download
+      finalCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const familyName = this.families.find(f => f.id === this.selectedFamilyId)?.name || 'GiaPha';
+        link.download = `${familyName}_${name}_${new Date().getTime()}.png`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+        this.snack.open(`Đã tải xuống ${name}`, 'Đóng', { duration: 2000 });
+      }, 'image/png', 1.0);
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      this.snack.open('Lỗi khi tạo ảnh', 'Đóng', { duration: 2000 });
+    }
   }
 }

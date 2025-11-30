@@ -26,6 +26,25 @@
 			</mat-select>
 		</mat-form-field>
 
+		<!-- Field cho Quản lý: chọn nhiều dòng họ -->
+		<mat-form-field appearance="outline" *ngIf="selectedRole === 'QUAN_LY'">
+			<mat-label>Dòng họ được quản lý</mat-label>
+			<mat-select formControlName="managedFamilies" multiple>
+				<mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
+			</mat-select>
+			<mat-hint>Chọn các dòng họ mà quản lý này được phép quản lý</mat-hint>
+		</mat-form-field>
+
+		<!-- Field cho Nhân viên và Trưởng họ: chọn 1 dòng họ -->
+		<mat-form-field appearance="outline" *ngIf="selectedRole === 'NHAN_VIEN' || selectedRole === 'TRUONG_HO'">
+			<mat-label>Dòng họ được chỉ định</mat-label>
+			<mat-select formControlName="assignedFamily">
+				<mat-option value="">-- Chọn dòng họ --</mat-option>
+				<mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
+			</mat-select>
+			<mat-hint>Chọn dòng họ mà {{ selectedRole === 'NHAN_VIEN' ? 'nhân viên' : 'trưởng họ' }} này được phụ trách</mat-hint>
+		</mat-form-field>
+
 		<div style="display:flex; gap: 8px;">
 			<button mat-flat-button color="primary" type="submit">Lưu</button>
 			<a mat-stroked-button color="accent" routerLink="/users">Hủy</a>

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
 import { MembersService } from './members.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
@@ -8,14 +8,20 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { mkdirSync, existsSync } from 'fs';
 import { Union } from '../unions/schemas/union.schema';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Resource, Action, CurrentUser } from '../auth/decorators/roles.decorator';
+import type { AuthUser } from '../auth/permissions.service';
 
 @Controller('members')
+@UseGuards(PermissionsGuard)
 export class MembersController {
   constructor(private readonly service: MembersService) {}
 
   @Get()
-  findAll(@Query('family') family?: string, @Query('q') q?: string) {
-    return this.service.findAll({ family, q });
+  @Resource('members')
+  @Action('read')
+  findAll(@CurrentUser() user: AuthUser, @Query('family') family?: string, @Query('q') q?: string) {
+    return this.service.findAll(user, { family, q });
   }
 
   @Get('by-family/:familyId')
@@ -24,8 +30,10 @@ export class MembersController {
   }
 
   @Get('tree')
-  buildTree(@Query('family') familyId: string, @Query('root') rootId?: string) {
-    return this.service.buildTree(familyId, rootId);
+  @Resource('tree')
+  @Action('read')
+  buildTree(@CurrentUser() user: AuthUser, @Query('family') familyId: string, @Query('root') rootId?: string) {
+    return this.service.buildTree(user, familyId, rootId);
   }
 
   @Get(':id')
