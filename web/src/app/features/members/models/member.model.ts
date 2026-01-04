@@ -14,4 +14,5 @@ export interface Member {
   dod?: string; // ISO date string
   position?: string; // position id
   gender?: 'male' | 'female' | 'other';
+  isMartyred?: boolean;
 }

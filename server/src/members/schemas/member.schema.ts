@@ -48,6 +48,9 @@ export class Member {
 
   @Prop({ required: false, enum: ['male', 'female', 'other'], default: 'male' })
   gender?: 'male' | 'female' | 'other';
+
+  @Prop({ required: false, default: false })
+  isMartyred?: boolean;
 }
 
 export const MemberSchema = SchemaFactory.createForClass(Member);

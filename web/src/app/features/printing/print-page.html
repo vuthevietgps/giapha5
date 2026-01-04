@@ -1,0 +1,213 @@
+<div class="page-shell">
+  <mat-card class="controls">
+    <div class="row row-main">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Cây gia phả</mat-label>
+        <mat-select [(value)]="selectedFamilyId" (selectionChange)="onFamilyChange($event.value)">
+          <mat-option *ngFor="let f of families" [value]="f.id">{{f.name}}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Ảnh nền</mat-label>
+        <mat-select [value]="selectedBackgroundId" (selectionChange)="onBackgroundChange($event.value)">
+          <mat-option [value]="null">Không dùng nền</mat-option>
+          <mat-option *ngFor="let bg of backgrounds" [value]="bg.id">{{bg.name}}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <div class="dim">Kích thước khung: 20000 × 10000 px (tỉ lệ 2:1)</div>
+      <span class="spacer"></span>
+      <button mat-stroked-button color="accent" (click)="resetPositions()">
+        <mat-icon>my_location</mat-icon>
+        Đặt lại vị trí
+      </button>
+      <button mat-flat-button color="primary" (click)="exportPoster()">
+        <mat-icon>print</mat-icon>
+        Xuất PNG 20000×10000
+      </button>
+    </div>
+
+    <div class="row row-tools">
+      <div class="cluster">
+        <div class="cluster-line">
+          <mat-form-field appearance="outline" class="field narrow">
+            <mat-label>Cuốn thư</mat-label>
+            <mat-select [value]="selectedDecor.scroll" (selectionChange)="selectedDecor.scroll = $event.value; persistDecor('scroll')">
+              <mat-option [value]="null">Không</mat-option>
+              <mat-option *ngFor="let it of decorAssets.scroll" [value]="it.id">{{it.name}}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-stroked-button (click)="scrollInput.click()">Tải cuốn thư</button>
+          <button mat-button *ngIf="selectedDecor.scroll" (click)="clearDecor('scroll')">Xóa</button>
+          <input type="file" #scrollInput hidden accept="image/*" (change)="onDecorUpload('scroll', $event)">
+        </div>
+        <div class="cluster-line">
+          <mat-form-field appearance="outline" class="field narrow">
+            <mat-label>Rồng trái</mat-label>
+            <mat-select [value]="selectedDecor.dragonLeft" (selectionChange)="selectedDecor.dragonLeft = $event.value; persistDecor('dragonLeft')">
+              <mat-option [value]="null">Không</mat-option>
+              <mat-option *ngFor="let it of decorAssets.dragonLeft" [value]="it.id">{{it.name}}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-stroked-button (click)="dragonLeftInput.click()">
+            <mat-icon>pets</mat-icon>
+            Tải rồng trái
+          </button>
+          <button mat-button *ngIf="selectedDecor.dragonLeft" (click)="clearDecor('dragonLeft')">Xóa</button>
+          <input type="file" #dragonLeftInput hidden accept="image/*" (change)="onDecorUpload('dragonLeft', $event)">
+        </div>
+        <div class="cluster-line">
+          <mat-form-field appearance="outline" class="field narrow">
+            <mat-label>Rồng phải</mat-label>
+            <mat-select [value]="selectedDecor.dragonRight" (selectionChange)="selectedDecor.dragonRight = $event.value; persistDecor('dragonRight')">
+              <mat-option [value]="null">Không</mat-option>
+              <mat-option *ngFor="let it of decorAssets.dragonRight" [value]="it.id">{{it.name}}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-stroked-button (click)="dragonRightInput.click()">
+            <mat-icon>pets</mat-icon>
+            Tải rồng phải
+          </button>
+          <button mat-button *ngIf="selectedDecor.dragonRight" (click)="clearDecor('dragonRight')">Xóa</button>
+          <input type="file" #dragonRightInput hidden accept="image/*" (change)="onDecorUpload('dragonRight', $event)">
+          <button mat-flat-button color="accent" (click)="openCoupletDialog()">
+            <mat-icon>edit</mat-icon>
+            Đổi câu đối (chữ)
+          </button>
+        </div>
+      </div>
+
+      <div class="cluster">
+        <div class="cluster-line">
+          <button mat-stroked-button color="primary" (click)="svgInput.click()">
+            <mat-icon>account_tree</mat-icon>
+            Chọn SVG cây
+          </button>
+          <input type="file" #svgInput hidden accept="image/svg+xml" (change)="onTreeSvgSelected($event)">
+          <button mat-button *ngIf="treeSvgUrl" (click)="clearTreeSvg()">Gỡ SVG</button>
+        </div>
+        <div class="cluster-line" *ngIf="treeSvgUrl">
+          <div class="label">Cỡ chữ cây (rem)</div>
+          <mat-slider min="0.6" max="2.5" step="0.05">
+            <input matSliderThumb [(ngModel)]="treeFontRem" (ngModelChange)="applyTreeFontSize(treeFontRem)" />
+          </mat-slider>
+          <span class="hint">Chỉ tác động vào text trong SVG cây</span>
+        </div>
+        <div class="hint">Lưu ý: chọn file cây không dính nền; nền chọn riêng ở ô "Ảnh nền".</div>
+      </div>
+
+      <div class="cluster zoom-cluster">
+        <div class="label">Thu/phóng cây ({{ treeZoom }}%)</div>
+        <mat-slider min="50" max="200" step="1">
+          <input matSliderThumb [(ngModel)]="treeZoom" (ngModelChange)="onTreeZoomChange(treeZoom)" />
+        </mat-slider>
+        <div class="cluster-line">
+          <button mat-stroked-button (click)="resetTreeZoom()">Đặt lại 100%</button>
+          <span class="hint">Phóng to/thu nhỏ toàn bộ cây gia phả.</span>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+
+  <div class="preview-container" #outerRef>
+    <div class="scale-wrapper" [style.transform]="'scale(' + previewScale() + ')'">
+      <div
+        class="print-canvas"
+        #canvasRef
+        [style.width.px]="designWidth"
+        [style.height.px]="designHeight"
+        [style.backgroundImage]="backgroundUrl ? 'url(' + backgroundUrl + ')' : 'none'"
+      >
+        <img
+          *ngIf="decorSource('scroll')"
+          [src]="decorSource('scroll')"
+          class="decor scroll draggable"
+          [class.dragging]="isDragging('scroll')"
+          [style.transform]="positionTransform('scroll')"
+          (pointerdown)="beginDrag('scroll', $event)"
+          alt="Cuốn thư"
+        />
+          <img
+            *ngIf="decorSource('dragonLeft')"
+            [src]="decorSource('dragonLeft')"
+            class="decor dragon-left draggable"
+            [class.dragging]="isDragging('dragonLeft')"
+            [style.transform]="positionTransform('dragonLeft')"
+            (pointerdown)="beginDrag('dragonLeft', $event)"
+            alt="Rồng trái"
+          />
+          <img
+            *ngIf="decorSource('dragonRight')"
+            [src]="decorSource('dragonRight')"
+            class="decor dragon-right draggable"
+            [class.dragging]="isDragging('dragonRight')"
+            [style.transform]="positionTransform('dragonRight')"
+            (pointerdown)="beginDrag('dragonRight', $event)"
+            alt="Rồng phải"
+          />
+
+        <div
+          class="couplet-text left draggable"
+          *ngIf="couplet.leftText"
+          [style.transform]="positionTransform('coupletLeft')"
+          [style.fontSize.rem]="couplet.fontSize"
+          [style.fontFamily]="couplet.fontFamily"
+          [style.color]="couplet.color"
+          [class.dragging]="isDragging('coupletLeft')"
+          (pointerdown)="beginDrag('coupletLeft', $event)"
+        >
+          <span class="couplet-word" *ngFor="let w of splitWords(couplet.leftText)">{{ w }}</span>
+        </div>
+        <div
+          class="couplet-text right draggable"
+          *ngIf="couplet.rightText"
+          [style.transform]="positionTransform('coupletRight')"
+          [style.fontSize.rem]="couplet.fontSize"
+          [style.fontFamily]="couplet.fontFamily"
+          [style.color]="couplet.color"
+          [class.dragging]="isDragging('coupletRight')"
+          (pointerdown)="beginDrag('coupletRight', $event)"
+        >
+          <span class="couplet-word" *ngFor="let w of splitWords(couplet.rightText)">{{ w }}</span>
+        </div>
+
+        <div
+          class="tree-slot draggable"
+          [style.transform]="positionTransform('tree')"
+          [style.width.px]="treeWidthPx"
+          [style.height.px]="treeHeightPx"
+          [class.dragging]="isDragging('tree')"
+          (pointerdown)="beginDrag('tree', $event)"
+        >
+          <img
+            *ngIf="treeSvgUrl; else pngFallback"
+            [src]="treeSvgUrl"
+            class="tree-image"
+            [style.transform]="'scale(' + treeZoom / 100 + ')'"
+            style="transform-origin: center center;"
+            alt="Cây gia phả (SVG)"
+          />
+          <ng-template #pngFallback>
+            <img
+              *ngIf="treeImageUrl"
+              [src]="treeImageUrl"
+              class="tree-image"
+              [style.transform]="'scale(' + treeZoom / 100 + ')'"
+              style="transform-origin: center center;"
+              alt="Cây gia phả"
+            />
+          </ng-template>
+          <div class="tree-placeholder" *ngIf="!treeSvgUrl && !treeImageUrl">
+            <mat-icon>insert_photo</mat-icon>
+            <div>Chưa có ảnh cây</div>
+            <div class="hint">Chọn ảnh đã xuất và dán vào khung này.</div>
+            <div class="hint">Dòng họ: {{ selectedFamilyName }}</div>
+          </div>
+        </div>
+
+        <div class="watermark">Khung in ấn 20000 × 10000 (2:1)</div>
+      </div>
+    </div>
+  </div>
+</div>

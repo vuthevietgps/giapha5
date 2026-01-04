@@ -196,7 +196,6 @@
     border-radius: 8px;
     padding: 8px 10px;
     background: #fff;
-    border-left: 4px solid transparent;
     transition: border-color 0.2s ease;
 
     .box-inner {
@@ -266,6 +265,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  
+  &.male .name {
+    color: #2196F3; // Blue for male
+  }
+  
+  &.female .name {
+    color: #E91E63; // Pink for female
   }
   
   .years {

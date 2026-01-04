@@ -71,4 +71,8 @@ export class CreateMemberDto {
   @IsString()
   @IsOptional()
   gender?: 'male' | 'female' | 'other';
+
+  @IsBoolean()
+  @IsOptional()
+  isMartyred?: boolean;
 }

@@ -18,7 +18,7 @@ import { PostDetail } from './features/posts/pages/post-detail/post-detail';
 import { CalendarPage } from './features/calendar/calendar-page';
 import { BranchPage } from './features/members/pages/member-branch/branch-page';
 import { BranchCalendarPage } from './features/members/pages/member-branch/branch-calendar-page';
-import { BackgroundsPage } from './features/backgrounds/pages/backgrounds-page';
+import { DashboardPage } from './features/dashboard/dashboard-page';
 
 // Auth guard function
 const authGuard = () => {
@@ -37,6 +37,7 @@ export const routes: Routes = [
 	{ path: '', component: LandingPage, title: 'Trang chủ - Gia Phả Số' },
 	{ path: 'home', component: LandingPage, title: 'Trang chủ - Gia Phả Số' },
 	{ path: 'login', component: LoginPage, title: 'Đăng nhập - Gia Phả Số' },
+	{ path: 'dashboard', component: DashboardPage, title: 'Tổng quan', canActivate: [authGuard] },
 	{ path: 'users', component: UserList, title: 'Quản lý người dùng', canActivate: [authGuard] },
 	{ path: 'users/new', component: UserForm, title: 'Thêm người dùng', canActivate: [authGuard] },
 	{ path: 'users/:id/edit', component: UserForm, title: 'Sửa người dùng', canActivate: [authGuard] },
@@ -55,5 +56,4 @@ export const routes: Routes = [
 	{ path: 'members/branch', component: BranchPage, title: 'Nhánh quan tâm', canActivate: [authGuard] },
 	{ path: 'members/branch-calendar', component: BranchCalendarPage, title: 'Lịch quan trọng (nhánh)', canActivate: [authGuard] },
 	{ path: 'calendar', component: CalendarPage, title: 'Lịch vạn niên', canActivate: [authGuard] },
-	{ path: 'backgrounds', component: BackgroundsPage, title: 'Ảnh nền', canActivate: [authGuard] },
 ];

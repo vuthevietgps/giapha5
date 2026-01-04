@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, AfterViewInit, ElementRef, ViewChild, ViewChildren, QueryList, HostListener } from '@angular/core';
+import { Component, OnInit, inject, AfterViewInit, ElementRef, ViewChild, ViewChildren, QueryList, HostListener, effect, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -13,22 +13,32 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { RouterModule } from '@angular/router';
+import { CoupletDialog, CoupletDialogResult } from '../../../printing/couplet.dialog';
 import { TreeEditMemberDialog } from './tree-edit-member.dialog';
 import { TreeAddPartnerDialog } from './tree-add-partner.dialog';
 import { TreeSelectFatherDialog } from './tree-select-father.dialog';
 import { TreeBackgroundsDialog } from './tree-backgrounds.dialog';
-import { BackgroundService } from '../../../backgrounds/services/background';
-import { FamilyService } from '../../../families/services/family';
+import { TreeDecorDialog, type DecorDialogResult } from './tree-decor.dialog';
 import { MemberService } from '../../services/member';
 import { UnionService } from '../../services/union';
 import type { Family } from '../../../families/models/family.model';
 import type { Member } from '../../models/member.model';
 import { firstValueFrom } from 'rxjs';
-import { computeStatsFromMembers } from './tree-utils';
 import { buildConnections } from './tree-connections';
 import { buildLevels } from './tree-levels';
 import { resolveFatherForMotherAsync as resolveFatherForMotherAsyncUtil, ensureUnionIfNeeded as ensureUnionIfNeededUtil } from './tree-relations';
 import { collectSubtree } from './tree-focus';
+import { TreeToolbarComponent } from './components/tree-toolbar.component';
+import { TreeStore } from './tree.store';
+import { TreeFacade } from './tree.facade';
+import type { TextItem } from './services/tree-text.service';
+import { TreeTextService, type CoupletData } from './services/tree-text.service';
+import { TreeTextDialog, type TextDialogResult } from './tree-text.dialog';
+import type { LayerPosition, MovableLayer } from './tree-layout';
+import { cloneDefaultPositions, cloneDefaultScales, loadPositions, persistPositions, loadScales, persistScales } from './tree-layout';
+import { TreeExportService, type ExportSize, type ExportOrientation } from './services/tree-export.service';
+import { TreeDecorationService, type DecorSlot, type DecorAsset } from './services/tree-decoration.service';
+import { TreeFontService, type FontItem } from './services/tree-font.service';
 
 @Component({
   selector: 'app-tree-page',
@@ -47,28 +57,35 @@ import { collectSubtree } from './tree-focus';
     FormsModule,
     MatInputModule,
     RouterModule,
+    TreeToolbarComponent,
   ],
   templateUrl: './tree-page.html',
   styles: [`
-    .tree-shell{display:flex;height:calc(100vh - 64px);}
-    .left{flex:1;display:flex;flex-direction:column;}
+    .tree-shell{display:flex;min-height:100vh;}
+    .left{flex:1;display:flex;flex-direction:column;min-height:100vh;}
     .right{width:280px;border-left:1px solid #e0e0e0}
-  .header{display:flex;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #e0e0e0}
+  .header{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #e0e0e0;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap}
+  .header>*{flex:0 0 auto}
+  .header button{white-space:nowrap;min-height:36px;padding:0 10px}
+  .header::-webkit-scrollbar{height:8px}
+  .header::-webkit-scrollbar-thumb{background:#c7c7c7;border-radius:999px}
+  .header::-webkit-scrollbar-track{background:transparent}
     .spacer{flex:1}
-  .tree-area{position:relative;flex:1;overflow:auto;padding:8px}
+  .tree-area{position:relative;width:100%;height:calc(100vh - 64px);max-width:none;aspect-ratio:auto;overflow:auto;padding:8px;border:1px solid #e0e0e0;border-radius:12px;box-sizing:border-box;background:#fafafa}
   .tree-area.space-pan{cursor:grab}
   .tree-area.space-pan.panning{cursor:grabbing}
-  .center-wrap{min-width:100%;min-height:100%;display:grid;justify-content:center;align-content:flex-start}
+  .center-wrap{min-width:100%;min-height:100%;display:grid;justify-content:center;align-content:flex-start;position:relative;z-index:1}
   .tree-content{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:100%}
   .connections{position:absolute;left:0;top:0;pointer-events:none;z-index:999}
     .node{border:1px solid #ccc;border-radius:8px;padding:8px 12px;background:transparent;min-width:160px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-  .couple-box{display:inline-grid;grid-template-rows:auto auto;row-gap:6px;justify-items:center;border:2px solid #1976d2;border-radius:10px;padding:10px 12px 12px;background:transparent;position:relative;z-index:2;width:fit-content;max-width:none;box-shadow:0 2px 4px rgba(0,0,0,.06);overflow:hidden;transition:border-color .15s}
+  .couple-box{display:inline-grid;grid-template-rows:auto auto;row-gap:6px;justify-items:center;border:2px solid #e0e0e0;border-radius:12px;padding:10px 12px 12px;background:transparent;position:relative;z-index:2;width:fit-content;max-width:none;box-shadow:0 2px 4px rgba(0,0,0,.06);overflow:hidden;transition:border-color .15s}
   /* Nền trong suốt; giữ vạch màu giới tính ở cạnh trái */
-  .person{margin:0 auto 2px;text-align:center;padding:4px 10px 4px 12px;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:auto;position:relative;background:transparent}
-  .person:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:6px 0 0 6px;background:#1976d2}
-  .person.female:before{background:#d81b60}
-  .person.male{background:transparent}
-  .person.female{background:transparent}
+  .person{margin:0 auto 2px;text-align:center;padding:6px 12px 6px 16px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:auto;position:relative;background:transparent}
+  .person::before{content:"";position:absolute;left:4px;top:6px;width:6px;height:calc(100% - 12px);border-radius:6px;background:#1976d2;box-shadow:0 0 0 1px rgba(0,0,0,0.06)}
+  .person.male::before{background:#1976d2}
+  .person.female::before{background:#d81b60}
+  .person.male .name{color:#000}
+  .person.female .name{color:#000}
   .child-couple.couple-box{padding:6px 10px}
   .wives-list{display:flex;gap:6px;flex-wrap:nowrap;justify-content:center;align-items:flex-end}
     .wives-list .person{position:relative;padding-bottom:18px}
@@ -84,17 +101,42 @@ import { collectSubtree } from './tree-focus';
   .stats-inline{display:flex;gap:10px;align-items:center;margin-left:8px}
   .stat-item{display:flex;gap:4px;align-items:baseline;font-size:12px;color:#444}
   .stat-item strong{font-size:13px;color:#000}
-  `]
+  .draggable{cursor:grab;pointer-events:auto}
+  .draggable.dragging{cursor:grabbing}
+  .resizable{resize:both;overflow:auto;box-sizing:border-box}
+  /* Tắt khung/ô resize cho câu đối để chỉ còn chữ */
+  .couplet-text.resizable{resize:none;overflow:visible;border:none;outline:none;box-shadow:none;background:transparent}
+  /* Canvas overflow visible để không cắt decor/text khi drag ra ngoài */
+  .canvas{min-width:var(--paper-width);min-height:var(--paper-height);overflow:visible!important;position:relative;}
+  .bg-rotator{max-width:100%;max-height:100%;}
+  .decor.scroll{position:absolute;top:0;left:50%;transform:translate(-50%,0);max-width:5200px;width:32%;height:auto;z-index:5;pointer-events:auto}
+  .decor.dragon-left{position:absolute;top:0;left:50%;transform:translate(-50%,0);max-width:4200px;width:26%;height:auto;z-index:5;pointer-events:auto}
+  .decor.dragon-right{position:absolute;top:0;left:50%;transform:translate(-50%,0);max-width:4200px;width:26%;height:auto;z-index:5;pointer-events:auto}
+  .couplet-text{position:absolute;top:0;left:50%;transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px 14px;width:fit-content;min-width:140px;max-width:420px;max-height:3600px;text-align:center;line-height:1.05;letter-spacing:0;white-space:nowrap;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,0.2);user-select:none;z-index:4;pointer-events:auto;background:transparent;border-radius:10px;box-shadow:none}
+  .couplet-text.left{ }
+  .couplet-text.right{ }
+  .couplet-word{display:block}
+  .text-item{position:absolute;cursor:move;user-select:none;font-weight:700;z-index:1200;white-space:pre-wrap;}
+  .curved-text{display:flex;gap:2px;align-items:flex-end;justify-content:center;line-height:1}
+  .curved-char{display:inline-block;transform-origin:bottom center;}
+  .bg-rotator{position:absolute;inset:0;background-repeat:no-repeat;background-position:center top;z-index:0;pointer-events:none;transition:transform .2s ease}
+  .bg-rotator.rotated{transform:rotate(90deg) scale(2);transform-origin:center center}
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TreePage implements OnInit, AfterViewInit {
-  private readonly familiesApi = inject(FamilyService);
   private readonly membersApi = inject(MemberService);
   private readonly unionsApi = inject(UnionService);
-  private readonly backgroundsApi = inject(BackgroundService);
+  private readonly treeStore = inject(TreeStore);
+  private readonly treeFacade = inject(TreeFacade);
   private readonly snack = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly exportService = inject(TreeExportService);
+  private readonly decorService = inject(TreeDecorationService);
+  private readonly textService = inject(TreeTextService);
+  private readonly fontService = inject(TreeFontService);
 
   families: Family[] = [];
   selectedFamilyId: string | null = null;
@@ -127,22 +169,47 @@ export class TreePage implements OnInit, AfterViewInit {
   private panStart = { x: 0, y: 0 };
   private scrollStart = { left: 0, top: 0 };
   isPanning = false;
+  panAlwaysEnabled = true;
   // Cache cha ưa thích theo từng người mẹ để giảm popup chọn cha lặp lại
   private preferredFatherByMother: Record<string, string> = {};
   // Màu nhóm: cha nhiều vợ -> gom theo mẹ; mẹ nhiều chồng -> gom theo cha
   private colorFatherMotherPair = new Map<string,string>(); // key: fatherId|motherId
   private colorMotherFatherPair = new Map<string,string>(); // key: motherId|fatherId
   private loadToken = 0; // dùng để vô hiệu hóa response cũ khi đổi dòng họ nhanh
+  // Xoay nền đã bỏ
+  rotateBackground = false;
   // Focus subtree state
   focusRootId: string | null = null;
   includeSpousesInFocus = true;
   // Background management
   selectedBackgroundId: string | null = null;
   backgroundUrl: string | null = null;
-  backgroundFit: 'contain' | 'cover' = 'contain';
-  // Top padding (px) to lower the tree to match background artwork
-  // Increased default from 120 -> 160 to align better with decorative header in backgrounds.
+  backgroundFit: 'cover' = 'cover';
+  // Bottom padding (px) to create space below tree for better layout
+  // Allows decorations to move upward without being clipped
   topOffset = 160;
+
+  // Decor & couplet (for in-place preview like print page) - now managed by services
+  // Expose service signals for template binding
+  decorAssets = this.decorService.decorAssets;
+  decorInstances = this.decorService.decorInstances;
+  textItems = this.textService.textItems;
+  couplet = this.textService.couplet;
+  customFonts = this.fontService.customFonts;
+
+  positions: Record<MovableLayer, LayerPosition> = cloneDefaultPositions();
+  private dragState: { layer: MovableLayer; startX: number; startY: number; origin: LayerPosition; size: { w: number; h: number } } | null = null;
+  scales: Record<MovableLayer, number> = cloneDefaultScales();
+
+  // Kích thước giấy mặc định 2:1 (px)
+  paperWidth = 2000;
+  paperHeight = 1000;
+
+  private textDrag: { id: string; startX: number; startY: number; origin: { x: number; y: number } } | null = null;
+
+  goHome(){
+    this.router.navigateByUrl('/');
+  }
 
   @ViewChild('treeAreaRef') treeAreaEl?: ElementRef<HTMLDivElement>;
   @ViewChild('canvasRef') canvasEl?: ElementRef<HTMLDivElement>;
@@ -157,159 +224,151 @@ export class TreePage implements OnInit, AfterViewInit {
     totalMembers: 0, totalMale: 0, totalFemale: 0, totalAlive: 0, totalDeceased: 0, totalGenerations: 0
   };
 
-  ngOnInit(){
-    // Đọc query params focus & spouses
+  constructor() {
+    // Register reactive bridges in DI context so effect() is allowed
+    this.treeStore.init();
+
+    effect(() => {
+      this.families = this.treeStore.families();
+      this.selectedBackgroundId = this.treeStore.selectedBackgroundId();
+      this.backgroundUrl = this.treeStore.backgroundUrl();
+      this.topOffset = this.treeStore.topOffset();
+    });
+
+    effect(() => {
+      const familyId = this.treeStore.selectedFamilyId();
+      console.log('🔄 Family changed effect triggered:', familyId);
+      this.selectedFamilyId = familyId;
+      if (!familyId) {
+        this.textService.clearTextItems();
+        this.positions = cloneDefaultPositions();
+        this.scales = cloneDefaultScales();
+        this.decorService.loadDecor(null);
+        this.fontService.loadFonts(null);
+        this.treeFacade.setFamily(null);
+        return;
+      }
+
+      console.log('📝 Loading data for family:', familyId);
+      this.textService.loadTextItems(familyId);
+      this.textService.loadCouplet(familyId);
+      this.positions = loadPositions(this.positionsKey());
+      this.scales = loadScales(this.scalesKey());
+      this.decorService.loadDecor(familyId);
+      this.fontService.loadFonts(familyId);
+      this.treeFacade.setFamily(familyId);
+      console.log('✅ Data loaded - decorInstances:', this.decorInstances().length, 'textItems:', this.textItems().length);
+    });
+
+    effect(() => {
+      this.root = this.treeFacade.root();
+      this.spouses = this.treeFacade.spouses();
+      this.levels = this.treeFacade.levels();
+      this.allMembers = this.treeFacade.allMembers();
+      this.spousesByMember = this.treeFacade.spousesByMember();
+      this.memberById = this.treeFacade.memberById();
+      this.wifeColor = this.treeFacade.wifeColor();
+      this.stats = this.treeFacade.stats();
+      this.focusRootId = this.treeFacade.focusRootId();
+      this.includeSpousesInFocus = this.treeFacade.includeSpousesInFocus();
+      this.scheduleConnections();
+    });
+  }
+
+  ngOnInit(): void {
     this.route.queryParamMap.subscribe(qp => {
       const focus = qp.get('focus');
       const spouses = qp.get('spouses');
       this.focusRootId = focus || null;
       this.includeSpousesInFocus = spouses !== '0';
-      // Khi thay đổi params mà đã có dữ liệu thì chỉ reload filter
-      if (this.allMembers.length) this.reload();
+      this.treeFacade.setFocus(this.focusRootId, this.includeSpousesInFocus);
     });
-    this.familiesApi.list().subscribe(f=>{
-      this.families = f;
-      if (f.length && !this.selectedFamilyId){
-        this.selectedFamilyId = f[0].id || null;
-        this.loadBackgroundChoice();
-        this.reload();
-      }
-    })
   }
 
-  onFamilyChange(){ this.reload(); }
+  loadPositions(): void {
+    const key = this.positionsKey();
+    this.positions = loadPositions(key);
+  }
+  persistPositions(): void {
+    const key = this.positionsKey();
+    if (!key) return;
+    persistPositions(key, this.positions);
+  }
+  resetPositions(): void {
+    this.positions = cloneDefaultPositions();
+    this.persistPositions();
+  }
+  loadScales(): void {
+    const key = this.scalesKey();
+    this.scales = loadScales(key);
+  }
+  persistScales(): void {
+    const key = this.scalesKey();
+    if (!key) return;
+    persistScales(key, this.scales);
+  }
+  resetScales(): void {
+    this.scales = cloneDefaultScales();
+    this.persistScales();
+  }
+
+  // toggleRotate removed with UI
+
+  onFamilyChange(){
+    this.treeStore.setFamily(this.selectedFamilyId);
+  }
 
   reload(){
-    if (!this.selectedFamilyId){
-      this.root = null; this.spouses = []; this.levels = []; this.connections = []; return;
-    }
-    this.loadBackgroundChoice();
-    const token = ++this.loadToken;
-    // Reset trạng thái màu & hôn phối để tránh “rò” giữa các họ
-    this.colorFatherMotherPair.clear();
-    this.colorMotherFatherPair.clear();
-    this.spousesByMember = {};
-    this.spouses = [];
-    this.levels = [];
-    this.connections = [];
-    this.membersApi.listByFamily(this.selectedFamilyId).subscribe(members=>{
-      if (token !== this.loadToken) return; // bị thay thế bởi lần reload khác
-      this.allMembers = members || [];
-      // Chọn root mới (không cố giữ root cũ khác họ)
-      let root: Member | null = null;
-      const candidates = members.filter(m=> m.gender==='male' && !m.father && !m.mother && !m.spouse);
-      if (candidates.length === 1) root = candidates[0];
-      else if (candidates.length > 1){
-        const childCount = (id: string) => members.filter(c=> c.father===id).length;
-        candidates.sort((a,b)=> childCount(b.id!) - childCount(a.id!));
-        root = candidates[0];
+    // Recompute connections and recentre gốc khi dữ liệu đổi
+    this.scheduleConnections();
+    setTimeout(()=>{
+      if (this.treeAreaEl){
+        this.treeAreaEl.nativeElement.scrollLeft = 0;
+        this.treeAreaEl.nativeElement.scrollTop = 0;
       }
-      this.root = root;
-      if (!root){ this.computeStats(); return; }
-      // Sau khi có danh sách unions mới xây spouses & levels để tránh chạy buildLevels hai lần
-      this.unionsApi.list({ family: this.selectedFamilyId! }).subscribe(us=>{
-        if (token !== this.loadToken) return;
-        const map: Record<string, Set<string>> = {};
-        const addPair = (a?: string, b?: string) => {
-          if (!a || !b || a === b) return;
-          map[a] = map[a] || new Set<string>(); map[a].add(b);
-          map[b] = map[b] || new Set<string>(); map[b].add(a);
-        };
-        us.forEach(u=>{
-          const ps = (u.partners||[]) as string[];
-          ps.forEach(p=> ps.forEach(q=> addPair(p, q)));
-        });
-        members.forEach(m=> addPair(m.id, m.spouse));
-        members.forEach(m=> addPair(m.father, (m as any).mother));
-        this.spousesByMember = {};
-        Object.keys(map).forEach(mid=>{
-          const set = map[mid];
-          this.spousesByMember[mid] = members.filter(m=> set.has(m.id!));
-        });
-        // Tạo map màu vợ/chồng toàn cục trước (sẽ lọc sau nếu focus)
-        this.wifeColor.clear();
-        const allPartnersGlobal = Object.values(this.spousesByMember).flat();
-        const seenGlobal = new Set<string>();
-        allPartnersGlobal.forEach((p, i)=>{ if (!seenGlobal.has(p.id!)) { this.wifeColor.set(p.id!, this.COLORS[i % this.COLORS.length]); seenGlobal.add(p.id!); } });
-        this.memberById = new Map(members.map(m=> [m.id!, m] as const));
-
-        let renderMembers = members;
-        let renderRoot = root;
-        let spousesMap = this.spousesByMember;
-        if (this.focusRootId){
-          const { visibleIds, root: focusRoot } = collectSubtree(members, this.focusRootId, this.spousesByMember, { includeSpouses: this.includeSpousesInFocus });
-          renderMembers = members.filter(m => visibleIds.has(m.id!));
-          renderRoot = focusRoot || root;
-          // Lọc lại spousesByMember chỉ giữ các partners nằm trong visibleIds để template không hiển thị anchor dư
-          const filtered: Record<string, Member[]> = {};
-          Object.keys(this.spousesByMember).forEach(mid => {
-            if (!visibleIds.has(mid)) return;
-            filtered[mid] = (this.spousesByMember[mid]||[]).filter(p => visibleIds.has(p.id!));
-          });
-            spousesMap = filtered;
-        }
-        this.spousesByMember = spousesMap;
-        this.root = renderRoot;
-        // Cập nhật danh sách spouses hiển thị ở hộp gốc (lọc theo visible set)
-        this.spouses = (spousesMap[renderRoot!.id!] || []);
-        this.levels = buildLevels(renderMembers, renderRoot!, spousesMap || {});
-        this.allMembers = renderMembers; // stats theo nhánh nếu đang focus
-        this.computeStats();
-        this.scheduleConnections();
-        // Tự căn giữa gốc khi đổi dòng họ để trải nghiệm nhất quán trên mọi họ
-        setTimeout(()=>{
-          if (this.treeAreaEl){
-            // reset scroll rồi mới căn giữa để tránh lệch
-            this.treeAreaEl.nativeElement.scrollLeft = 0;
-            this.treeAreaEl.nativeElement.scrollTop = 0;
-          }
-          this.centerRoot();
-        }, 60);
-      });
-    });
+      this.centerRoot();
+    }, 60);
   }
 
-  private loadBackgroundChoice(){
-    if (!this.selectedFamilyId) { this.selectedBackgroundId = null; this.backgroundUrl = null; this.topOffset = 160; return; }
-    const key = `bg:${this.selectedFamilyId}`;
-    const offKey = `bgOff:${this.selectedFamilyId}`;
-    const fitKey = `bgFit:${this.selectedFamilyId}`;
-    const id = localStorage.getItem(key);
-    const offRaw = localStorage.getItem(offKey);
-    const fit = (localStorage.getItem(fitKey) as ('contain'|'cover'|null)) || 'contain';
-    this.selectedBackgroundId = id;
-    this.backgroundUrl = id ? this.backgroundsApi.fileUrl(id) : null;
-    this.topOffset = offRaw ? Math.max(0, parseInt(offRaw, 10) || 0) : 160;
-    this.backgroundFit = fit === 'cover' ? 'cover' : 'contain';
+  onTopOffsetChange(){
+    this.treeStore.setTopOffset(this.topOffset);
   }
+
   openBackgrounds(){
     const ref = this.dialog.open(TreeBackgroundsDialog, { data: { selectedId: this.selectedBackgroundId }, width: '820px' });
     ref.afterClosed().subscribe((id: string | null | undefined) => {
       if (id === undefined) return; // closed without changes
-      this.selectedBackgroundId = id || null;
-      const key = this.selectedFamilyId ? `bg:${this.selectedFamilyId}` : null;
-      const offKey = this.selectedFamilyId ? `bgOff:${this.selectedFamilyId}` : null;
-      if (key){
-        if (id) localStorage.setItem(key, id); else localStorage.removeItem(key);
-      }
-      this.backgroundUrl = id ? this.backgroundsApi.fileUrl(id) : null;
-      // Persist current offset alongside background selection
-      if (offKey) localStorage.setItem(offKey, String(this.topOffset));
+      this.treeStore.setBackgroundSelection(id || null);
     });
   }
 
-  onTopOffsetChange(){
-    // Persist per family to keep alignment with chosen background
-    if (!this.selectedFamilyId) return;
-    const offKey = `bgOff:${this.selectedFamilyId}`;
-    localStorage.setItem(offKey, String(this.topOffset));
+  openDecorDialog(){
+    const ref = this.dialog.open(TreeDecorDialog, { data: { assets: this.decorAssets() }, width: '860px' });
+    ref.afterClosed().subscribe((res: DecorDialogResult | undefined) => {
+      if (!res) return;
+      this.decorService.decorAssets.set(res.assets);
+      this.decorService.persistDecor(this.selectedFamilyId);
+      
+      // If user clicked "Add to canvas" button
+      if (res.addInstance) {
+        this.decorService.addInstance(
+          res.addInstance.assetId,
+          res.addInstance.slot,
+          this.paperWidth,
+          this.paperHeight
+        );
+        this.decorService.persistDecor(this.selectedFamilyId);
+        this.snack.open('Đã thêm trang trí vào canvas', 'Đóng', { duration: 1500 });
+      }
+    });
   }
 
-  onBackgroundFitChange(fit: 'contain'|'cover'){
-    this.backgroundFit = fit;
-    if (!this.selectedFamilyId) return;
-    const fitKey = `bgFit:${this.selectedFamilyId}`;
-    localStorage.setItem(fitKey, fit);
+  addText(){
+    this.openTextDialog();
+  }
+
+  addScrollText(){
+    this.openTextDialog(undefined, true);
   }
 
   createRoot(){
@@ -318,9 +377,9 @@ export class TreePage implements OnInit, AfterViewInit {
     const name = prompt('Họ tên cụ tổ?');
     if (!name) return;
     this.membersApi.create({ fullName: name, family: this.selectedFamilyId, gender: 'male' }).subscribe({
-      next: _=>{ this.snack.open('Tạo cụ tổ thành công', 'Đóng', { duration: 2000 }); this.reload(); },
+      next: _=>{ this.snack.open('Tạo cụ tổ thành công', 'Đóng', { duration: 2000 }); this.treeFacade.reload(); },
       error: _=>{ this.snack.open('Không thể tạo cụ tổ', 'Đóng', { duration: 2500 }); },
-    })
+    });
   }
 
   openContextMenu(ev: MouseEvent, node: Member){
@@ -328,22 +387,22 @@ export class TreePage implements OnInit, AfterViewInit {
     this.ctx = { visible: true, x: ev.clientX, y: ev.clientY, node };
   }
 
-  // Focus subtree API
   enterFocus(node: Member){
     if (!node?.id) return;
     this.focusRootId = node.id;
+    this.treeFacade.setFocus(node.id, this.includeSpousesInFocus);
     this.updateFocusParams();
-    this.reload();
   }
+
   exitFocus(){
     this.focusRootId = null;
+    this.treeFacade.setFocus(null, this.includeSpousesInFocus);
     this.updateFocusParams();
-    this.reload();
   }
   toggleIncludeSpouses(val: boolean){
     this.includeSpousesInFocus = val;
+    this.treeFacade.setFocus(this.focusRootId, val);
     this.updateFocusParams();
-    if (this.focusRootId){ this.reload(); }
   }
   private updateFocusParams(){
     const params: any = {};
@@ -356,7 +415,7 @@ export class TreePage implements OnInit, AfterViewInit {
     if (!node) return;
     this.ctx.visible = false;
     const ref = this.dialog.open(TreeEditMemberDialog, { data: { member: node }, width: '720px' });
-    ref.afterClosed().subscribe((ok: boolean | undefined) => { if (ok) this.reload(); });
+    ref.afterClosed().subscribe((ok: boolean | undefined) => { if (ok) this.treeFacade.reload(); });
   }
 
   addWife(node: Member | null){
@@ -373,11 +432,11 @@ export class TreePage implements OnInit, AfterViewInit {
       this.membersApi.create(createPayload).subscribe({
         next: (partner)=>{
           this.unionsApi.create({ family: this.selectedFamilyId!, partners: [node.id!, partner.id!] }).subscribe({
-            next: _=>{ this.snack.open('Đã thêm hôn phối', 'Đóng', { duration: 1500 }); this.reload(); },
+            next: _=>{ this.snack.open('Đã thêm hôn phối', 'Đóng', { duration: 1500 }); this.treeFacade.reload(); },
             error: (err)=>{
               const msg = (err?.error?.message) || 'Tạo hôn phối thất bại';
               this.snack.open(msg, 'Đóng', { duration: 2500 });
-              this.unionsApi.normalize(node.id!).subscribe({ next: norm => { if (norm.created?.length) this.reload(); } });
+              this.unionsApi.normalize(node.id!).subscribe({ next: norm => { if (norm.created?.length) this.treeFacade.reload(); } });
             }
           })
         },
@@ -402,7 +461,7 @@ export class TreePage implements OnInit, AfterViewInit {
     if (father) payload.father = father.id;
     await this.ensureUnionIfNeeded(payload.mother, payload.father);
     this.membersApi.create(payload).subscribe({
-      next: _=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
+      next: _=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.treeFacade.reload(); },
       error: e=>{ const msg = e?.error?.message || 'Thêm con thất bại'; this.snack.open(msg, 'Đóng', { duration: 2000 }); },
     });
   }
@@ -422,7 +481,7 @@ export class TreePage implements OnInit, AfterViewInit {
     if (father) payload.father = father.id;
     await this.ensureUnionIfNeeded(payload.mother, payload.father);
     this.membersApi.create(payload).subscribe({
-      next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
+      next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.treeFacade.reload(); },
       error: (e)=> this.snack.open(e?.error?.message || 'Thêm con thất bại', 'Đóng', { duration: 2000 })
     });
   }
@@ -439,7 +498,7 @@ export class TreePage implements OnInit, AfterViewInit {
       this.preferredFatherByMother[owner.id!] = spouse.id!; // ghi nhớ lựa chọn
       await this.ensureUnionIfNeeded(payload.mother, payload.father);
       this.membersApi.create(payload).subscribe({
-        next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.reload(); },
+        next: ()=>{ this.snack.open('Đã thêm con', 'Đóng', { duration: 1500 }); this.treeFacade.reload(); },
         error: (e)=> this.snack.open(e?.error?.message || 'Thêm con thất bại', 'Đóng', { duration: 2000 })
       });
       return;
@@ -458,10 +517,6 @@ export class TreePage implements OnInit, AfterViewInit {
 
   @HostListener('window:resize')
   onResize(){ this.computeConnections(); }
-
-  private computeStats(){
-    this.stats = computeStatsFromMembers(this.allMembers || [], this.root, this.levels || []);
-  }
 
   computeConnections(){
     const base = (this.canvasEl?.nativeElement || this.treeAreaEl?.nativeElement);
@@ -532,10 +587,25 @@ export class TreePage implements OnInit, AfterViewInit {
   }
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(ev: KeyboardEvent){
-    if (ev.code === 'Space'){ this.spaceKey = true; ev.preventDefault(); }
+    if (ev.code === 'Space'){
+      // Don't prevent space key when user is typing in an input field
+      const target = ev.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+      }
+      this.spaceKey = true;
+      ev.preventDefault();
+    }
+  }
+  private canPanFromEvent(ev: MouseEvent): boolean {
+    const target = ev.target as HTMLElement | null;
+    if (!target) return false;
+    // Disallow pan when dragging on interactive nodes/anchors
+    return !target.closest('.person, .couple-box, .wives-list, .children, .anchor');
   }
   onMouseDown(ev: MouseEvent){
-    if (!this.spaceKey || !this.treeAreaEl) return;
+    if (!(this.spaceKey || this.panAlwaysEnabled) || !this.treeAreaEl) return;
+    if (!this.canPanFromEvent(ev)) return;
     this.isPanning = true;
     this.panStart = { x: ev.clientX, y: ev.clientY };
     this.scrollStart = { left: this.treeAreaEl.nativeElement.scrollLeft, top: this.treeAreaEl.nativeElement.scrollTop };
@@ -548,26 +618,204 @@ export class TreePage implements OnInit, AfterViewInit {
     this.treeAreaEl.nativeElement.scrollLeft = this.scrollStart.left - dx;
     this.treeAreaEl.nativeElement.scrollTop = this.scrollStart.top - dy;
   }
+
+  onTextPointerDown(item: TextItem, ev: PointerEvent){
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.textDrag = {
+      id: item.id,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      origin: { x: item.x, y: item.y },
+    };
+    window.addEventListener('pointermove', this.handleTextPointerMove);
+    window.addEventListener('pointerup', this.handleTextPointerUp);
+  }
+
+  private handleTextPointerMove = (ev: PointerEvent) => {
+    if (!this.textDrag) return;
+    const { id, startX, startY, origin } = this.textDrag;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    const treeScale = (this.scales['tree'] || 1) * this.zoom;
+    const adjDx = dx / treeScale;
+    const adjDy = dy / treeScale;
+    this.textService.moveTextItem(id, origin.x + adjDx, origin.y + adjDy);
+  };
+
+  private handleTextPointerUp = () => {
+    if (!this.textDrag) return;
+    this.textService.persistTextItems(this.selectedFamilyId);
+    this.textDrag = null;
+    window.removeEventListener('pointermove', this.handleTextPointerMove);
+    window.removeEventListener('pointerup', this.handleTextPointerUp);
+  };
+
+  onTextWheel(item: TextItem, ev: WheelEvent){
+    ev.preventDefault();
+    const delta = ev.deltaY > 0 ? -0.05 : 0.05;
+    const next = Math.min(3, Math.max(0.3, item.scale + delta));
+    if (next === item.scale) return;
+    this.textService.updateTextItem(item.id, { scale: next });
+    this.textService.persistTextItems(this.selectedFamilyId);
+  }
+
+  openTextDialog(existing?: TextItem, allowCurvature = false){
+    const ref = this.dialog.open(TreeTextDialog, {
+      data: {
+        item: existing ? { text: existing.text, color: existing.color, fontSize: existing.fontSize, fontFamily: existing.fontFamily, curvature: existing.curvature } : null,
+        fonts: this.fontService.getAllFonts().map(f => f.name),
+        allowCurvature,
+      },
+      width: '520px',
+    });
+    ref.afterClosed().subscribe((res: TextDialogResult | undefined) => {
+      if (!res) return;
+      if (existing){
+        this.textService.updateTextItem(existing.id, {
+          text: res.text,
+          color: res.color,
+          fontSize: res.fontSize,
+          fontFamily: res.fontFamily,
+          curvature: res.curvature,
+        });
+      } else {
+        const item = this.textService.createTextItem({
+          text: res.text,
+          fontFamily: res.fontFamily,
+          fontSize: res.fontSize,
+          color: res.color,
+          paperWidth: this.paperWidth,
+          paperHeight: this.paperHeight,
+        });
+        item.curvature = res.curvature;
+        this.textService.addTextItem(item);
+      }
+      this.textService.persistTextItems(this.selectedFamilyId);
+    });
+  }
+
+  editText(item: TextItem){
+    this.openTextDialog(item, true);
+  }
+
+  onTextContext(item: TextItem, ev: MouseEvent){
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.openTextDialog(item, true);
+  }
+
+  curvedChars(line: string, curvature: number): Array<{ char: string; display: string; angle: number; lift: number }>{
+    const chars = Array.from(line ?? '');
+    const total = chars.length || 1;
+    const arc = Math.max(-60, Math.min(60, curvature || 0)); // tổng độ cong cho cả dòng
+    const offset = (total - 1) / 2;
+    const span = Math.max(total - 1, 1);
+    const stepAngle = arc / span;
+    const maxLift = Math.min(30, Math.abs(arc) * 0.6 + 6);
+    return chars.map((char, idx) => {
+      const rel = offset === 0 ? 0 : (idx - offset) / offset;
+      const lift = maxLift * (1 - Math.min(1, rel * rel));
+      const angle = (idx - offset) * stepAngle * 0.6; // nhẹ nhàng
+      const display = char === ' ' ? '\u00A0' : char; // giữ khoảng trắng khi uốn cong
+      return { char, display, angle, lift };
+    });
+  }
+
+  curvedCharTransform(angle: number, lift: number, curvature: number): string {
+    const clampedAngle = Math.max(-18, Math.min(18, angle));
+    const clampedLift = Math.min(30, lift);
+    const direction = (curvature || 0) >= 0 ? -1 : 1; // cong lên: dịch âm (đi lên)
+    return `rotate(${clampedAngle}deg) translateY(${direction * clampedLift}px)`;
+  }
+
+  textLines(item: TextItem): string[] {
+    const raw = item.text || '';
+    const parts = raw.split(/\r?\n/);
+    return parts.length ? parts : [''];
+  }
   onMouseUp(){
     this.isPanning = false;
   }
+
+  onTreePointerDown(ev: PointerEvent){
+    this.beginDrag('tree', ev);
+  }
+
+  beginDrag(layer: MovableLayer, ev: PointerEvent){
+    ev.preventDefault();
+    ev.stopPropagation();
+    const origin = this.positions[layer] || { x: 0, y: 0 };
+    const target = ev.target as HTMLElement | null;
+    const rect = target?.getBoundingClientRect();
+    this.dragState = {
+      layer,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      origin: { x: origin.x, y: origin.y },
+      size: { w: rect?.width || 0, h: rect?.height || 0 },
+    };
+    window.addEventListener('pointermove', this.handlePointerMove);
+    window.addEventListener('pointerup', this.handlePointerUp);
+  }
+
+  private handlePointerMove = (ev: PointerEvent) => {
+    if (!this.dragState) return;
+    const { layer, startX, startY, origin } = this.dragState;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    const nextX = origin.x + dx;
+    const nextY = origin.y + dy;
+    this.positions = {
+      ...this.positions,
+      [layer]: { x: nextX, y: nextY },
+    };
+    if (layer === 'tree') {
+      this.scheduleConnections();
+    }
+  };
+
+  @HostListener('window:pointerup')
+  handlePointerUp(): void {
+    if (!this.dragState) return;
+    this.persistPositions();
+    this.dragState = null;
+    window.removeEventListener('pointermove', this.handlePointerMove);
+    window.removeEventListener('pointerup', this.handlePointerUp);
+  }
+  isDragging(layer: MovableLayer): boolean {
+    return this.dragState?.layer === layer;
+  }
+  positionTransform(layer: MovableLayer): string {
+    const p = this.positions[layer];
+    if (layer === 'tree') return this.treeTransform();
+    const scale = this.scales[layer] || 1;
+    return `translate(-50%, 0) translate(${p.x}px, ${p.y}px) scale(${scale})`;
+  }
+  treeTransform(): string {
+    const p = this.positions['tree'];
+    const extraScale = this.scales['tree'] || 1;
+    return `translate(${p.x}px, ${p.y}px) scale(${this.zoom * extraScale})`;
+  }
   onWheel(ev: WheelEvent){
-    // Ctrl + wheel to zoom, otherwise let default scroll happen
+    // Ctrl + wheel: thay đổi kích cỡ node (boxScale)
     if (ev.ctrlKey){
       ev.preventDefault();
-      const delta = -Math.sign(ev.deltaY) * 0.1; // wheel up -> zoom in
-      const newZoom = Math.min(2, Math.max(0.5, this.zoom + delta));
-      if (newZoom !== this.zoom){
-        this.zoom = newZoom;
+      const delta = ev.deltaY > 0 ? -0.1 : 0.1;
+      const next = Math.min(2.5, Math.max(0.1, this.boxScale + delta));
+      if (next !== this.boxScale){
+        this.boxScale = next;
         this.scheduleConnections();
       }
+      return;
     }
   }
-  onScaleChange(){
-    // Clamp and recompute connections since box sizes changed
-    if (this.boxScale < 0.6) this.boxScale = 0.6;
-    if (this.boxScale > 2.5) this.boxScale = 2.5;
-    this.scheduleConnections();
+  onOverlayWheel(layer: MovableLayer, ev: WheelEvent){
+    ev.preventDefault();
+    const delta = ev.deltaY > 0 ? -0.05 : 0.05;
+    const next = Math.min(4, Math.max(0.2, (this.scales[layer] || 1) + delta));
+    this.scales = { ...this.scales, [layer]: next };
+    this.persistScales();
   }
   genderColor(gender?: string){
     return (gender||'').toLowerCase() === 'female' ? '#d81b60' : '#1976d2';
@@ -578,7 +826,7 @@ export class TreePage implements OnInit, AfterViewInit {
     const ok = confirm(`Xóa ${node.fullName}? Hành động không thể hoàn tác.`);
     if (!ok) return;
     this.membersApi.delete(node.id!).subscribe({
-      next: ()=>{ this.snack.open('Đã xóa', 'Đóng', { duration: 1500 }); this.reload(); },
+      next: ()=>{ this.snack.open('Đã xóa', 'Đóng', { duration: 1500 }); this.treeFacade.reload(); },
       error: (e)=> this.snack.open(e?.error?.message || 'Xóa thất bại', 'Đóng', { duration: 2000 })
     });
   }
@@ -606,100 +854,212 @@ export class TreePage implements OnInit, AfterViewInit {
     await this.onAnchorClick(owner, spouse);
   }
 
-  async exportToPNG(size: 'A4' | 'A3') {
-    const html2canvas = (await import('html2canvas')).default;
-    
-    // A4: 210mm x 297mm at 300 DPI = 2480 x 3508 pixels
-    // A3: 297mm x 420mm at 300 DPI = 3508 x 4961 pixels
-    const dimensions = {
-      A4: { width: 2480, height: 3508, name: 'A4' },
-      A3: { width: 3508, height: 4961, name: 'A3' }
+  // Decor upload (cuốn thư, rồng trái/phải) - creates asset and adds instance to canvas
+  async onDecorUpload(payload: { slot: DecorSlot; event: Event }): Promise<void> {
+    const { slot, event } = payload;
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    try {
+      await this.decorService.addDecor(this.selectedFamilyId, slot, file);
+      
+      // Get the newly added asset (first in the array)
+      const assets = this.decorService.getDecorAssets(slot);
+      if (assets.length > 0) {
+        const newAsset = assets[0];
+        // Add instance to canvas at center
+        this.decorService.addInstance(newAsset.id, slot, this.paperWidth, this.paperHeight);
+      }
+      
+      this.decorService.persistDecor(this.selectedFamilyId, slot);
+      this.snack.open('Đã thêm trang trí', 'Đóng', { duration: 1500 });
+    } catch (err: any) {
+      console.error(err);
+      const message = err?.message || 'Không đọc được file ảnh';
+      this.snack.open(message, 'Đóng', { duration: 3000 });
+    }
+  }
+
+  // Add decoration instance from existing asset
+  addDecorInstance(assetId: string, slot: DecorSlot): void {
+    this.decorService.addInstance(assetId, slot, this.paperWidth, this.paperHeight);
+    this.decorService.persistDecor(this.selectedFamilyId);
+  }
+
+  // Remove decoration instance
+  removeDecorInstance(instanceId: string): void {
+    this.decorService.removeInstance(instanceId);
+    this.decorService.persistDecor(this.selectedFamilyId);
+  }
+
+  // Get decoration instance source (data URL)
+  getDecorInstanceSource(instance: any): string | null {
+    return this.decorService.getInstanceSource(instance);
+  }
+
+  // Drag handlers for decoration instances
+  private decorDragState: {
+    instance: any;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null = null;
+
+  onDecorInstancePointerDown(instance: any, ev: PointerEvent): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.decorDragState = {
+      instance,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      originX: instance.x,
+      originY: instance.y,
     };
-    
-    const { width, height, name } = dimensions[size];
-    
-    if (!this.canvasEl) {
-      this.snack.open('Không tìm thấy canvas', 'Đóng', { duration: 2000 });
+    window.addEventListener('pointermove', this.handleDecorPointerMove);
+    window.addEventListener('pointerup', this.handleDecorPointerUp);
+  }
+
+  private handleDecorPointerMove = (ev: PointerEvent) => {
+    if (!this.decorDragState) return;
+    const { instance, startX, startY, originX, originY } = this.decorDragState;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    const nextX = originX + dx;
+    const nextY = originY + dy;
+    this.decorService.updateInstancePosition(instance.id, nextX, nextY);
+  };
+
+  private handleDecorPointerUp = () => {
+    if (!this.decorDragState) return;
+    this.decorService.persistDecor(this.selectedFamilyId);
+    this.decorDragState = null;
+    window.removeEventListener('pointermove', this.handleDecorPointerMove);
+    window.removeEventListener('pointerup', this.handleDecorPointerUp);
+  };
+
+  // Scale decoration instance with mouse wheel
+  onDecorInstanceWheel(instance: any, ev: WheelEvent): void {
+    ev.preventDefault();
+    const delta = ev.deltaY > 0 ? -0.05 : 0.05;
+    const nextScale = Math.min(4, Math.max(0.2, instance.scale + delta));
+    this.decorService.updateInstanceScale(instance.id, nextScale);
+    this.decorService.persistDecor(this.selectedFamilyId);
+  }
+
+  // Context menu for decoration instance (delete)
+  onDecorInstanceContext(instance: any, ev: MouseEvent): void {
+    ev.preventDefault();
+    const ok = confirm('Xóa trang trí này?');
+    if (ok) {
+      this.removeDecorInstance(instance.id);
+    }
+  }
+
+
+  openCoupletDialog(): void {
+    const ref = this.dialog.open(CoupletDialog, { 
+      data: { 
+        couplet: { ...this.textService.couplet() }, 
+        fonts: this.fontService.getAllFonts(), 
+        customFonts: [...this.fontService.customFonts()] 
+      } 
+    });
+    ref.afterClosed().subscribe((res: CoupletDialogResult | undefined) => {
+      if (!res) return;
+      this.textService.setCouplet(res.couplet);
+      this.fontService.customFonts.set(res.customFonts || []);
+      this.textService.persistCouplet(this.selectedFamilyId);
+      this.fontService.persistFonts(this.selectedFamilyId);
+      res.customFonts?.forEach(f => { 
+        if (f.dataUrl) this.fontService['registerFontFace'](f.name, f.dataUrl); 
+      });
+    });
+  }
+
+  async exportToPNG(size: ExportSize, orientation: ExportOrientation = 'portrait') {
+    // Use treeAreaRef instead of canvasRef to capture all overflow elements
+    const captureElement = this.treeAreaEl?.nativeElement;
+    if (!captureElement) {
+      this.snack.open('Không tìm thấy vùng cây', 'Đóng', { duration: 2000 });
       return;
     }
 
-    const canvas = this.canvasEl.nativeElement;
-    
-    try {
-      this.snack.open(`Đang tạo ảnh ${name}...`, undefined, { duration: 1000 });
-      
-      // Capture the canvas with high quality
-      const captured = await html2canvas(canvas, {
-        backgroundColor: this.backgroundUrl ? null : '#ffffff',
-        scale: 2, // Higher quality
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
+    const familyName = this.families.find(f => f.id === this.selectedFamilyId)?.name || 'GiaPha';
+
+    await this.exportService.exportToPNG(captureElement, {
+      size,
+      orientation,
+      paperWidth: this.paperWidth,
+      paperHeight: this.paperHeight,
+      backgroundUrl: this.backgroundUrl,
+      backgroundFit: this.backgroundFit,
+      familyName
+    });
+  }
+
+  // Helpers for positions/scales persistence
+  private positionsKey(): string | null { 
+    return this.selectedFamilyId ? `tree:${this.selectedFamilyId}:positions` : null; 
+  }
+  
+  private scalesKey(): string | null { 
+    return this.selectedFamilyId ? `tree:${this.selectedFamilyId}:scales` : null; 
+  }
+
+  // Text item methods
+  onTextMouseDown(ev: MouseEvent, item: TextItem): void {
+    if (ev.button !== 0) return;
+    this.textDrag = { id: item.id, startX: ev.clientX, startY: ev.clientY, origin: { x: item.x, y: item.y } };
+  }
+
+  @HostListener('window:mousemove', ['$event'])
+  onTextMouseMove(ev: MouseEvent): void {
+    if (!this.textDrag) return;
+    const dx = ev.clientX - this.textDrag.startX;
+    const dy = ev.clientY - this.textDrag.startY;
+    const newX = this.textDrag.origin.x + dx;
+    const newY = this.textDrag.origin.y + dy;
+    this.textService.moveTextItem(this.textDrag.id, newX, newY);
+  }
+
+  @HostListener('window:mouseup')
+  onTextMouseUp(): void {
+    if (!this.textDrag) return;
+    this.textService.persistTextItems(this.selectedFamilyId);
+    this.textDrag = null;
+  }
+
+  editTextItem(item: TextItem): void {
+    const ref = this.dialog.open(TreeTextDialog, { 
+      data: { 
+        text: item.text,
+        fontFamily: item.fontFamily,
+        fontSize: item.fontSize,
+        color: item.color,
+        fonts: this.fontService.getAllFonts() 
+      } 
+    });
+    ref.afterClosed().subscribe((res: TextDialogResult | undefined) => {
+      if (!res) return;
+      this.textService.updateTextItem(item.id, {
+        text: res.text,
+        fontFamily: res.fontFamily,
+        fontSize: res.fontSize,
+        color: res.color
       });
+      this.textService.persistTextItems(this.selectedFamilyId);
+    });
+  }
 
-      // Create a new canvas with exact A4/A3 size
-      const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = width;
-      finalCanvas.height = height;
-      const ctx = finalCanvas.getContext('2d');
-      
-      if (!ctx) return;
+  deleteTextItem(id: string): void {
+    this.textService.deleteTextItem(id);
+    this.textService.persistTextItems(this.selectedFamilyId);
+  }
 
-      // Fill white background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
-
-      // Draw background image if exists
-      if (this.backgroundUrl) {
-        try {
-          const bgImg = new Image();
-          bgImg.crossOrigin = 'anonymous';
-          await new Promise((resolve, reject) => {
-            bgImg.onload = resolve;
-            bgImg.onerror = reject;
-            bgImg.src = this.backgroundUrl!;
-          });
-          
-          // Draw background based on backgroundFit setting
-          if (this.backgroundFit === 'cover') {
-            const scale = Math.max(width / bgImg.width, height / bgImg.height);
-            const x = (width - bgImg.width * scale) / 2;
-            const y = (height - bgImg.height * scale) / 2;
-            ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
-          } else { // contain
-            const scale = Math.min(width / bgImg.width, height / bgImg.height);
-            const x = (width - bgImg.width * scale) / 2;
-            const y = (height - bgImg.height * scale) / 2;
-            ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
-          }
-        } catch (err) {
-          console.warn('Could not load background image:', err);
-        }
-      }
-
-      // Scale and center the tree content
-      const scale = Math.min(width / captured.width, height / captured.height) * 0.95; // 95% to add margins
-      const x = (width - captured.width * scale) / 2;
-      const y = (height - captured.height * scale) / 2 + (this.topOffset * scale);
-      
-      ctx.drawImage(captured, x, y, captured.width * scale, captured.height * scale);
-
-      // Convert to blob and download
-      finalCanvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const familyName = this.families.find(f => f.id === this.selectedFamilyId)?.name || 'GiaPha';
-        link.download = `${familyName}_${name}_${new Date().getTime()}.png`;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-        this.snack.open(`Đã tải xuống ${name}`, 'Đóng', { duration: 2000 });
-      }, 'image/png', 1.0);
-      
-    } catch (error) {
-      console.error('Export error:', error);
-      this.snack.open('Lỗi khi tạo ảnh', 'Đóng', { duration: 2000 });
-    }
+  splitWords(text: string): string[] {
+    return this.textService.splitWords(text);
   }
 }

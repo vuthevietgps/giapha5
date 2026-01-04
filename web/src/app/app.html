@@ -1,6 +1,17 @@
 <!-- Layout với sidebar chỉ khi đã đăng nhập -->
 
+
 <ng-container *ngIf="isAuthenticated; else publicLayout">
+	<ng-container *ngIf="isTreeCompact(); else mainLayout">
+		<div class="tree-compact-shell">
+			<div class="tree-compact-content">
+				<router-outlet />
+			</div>
+		</div>
+	</ng-container>
+</ng-container>
+
+<ng-template #mainLayout>
 	<!-- Mobile Toolbar đặt ngoài sidenav-container để chắc chắn hiển thị trên mọi thiết bị -->
 	<mat-toolbar class="mobile-toolbar" color="primary">
 		<button mat-icon-button (click)="toggleSidenav()">
@@ -33,12 +44,28 @@
 			[mode]="sidenavMode()" 
 			[opened]="sidenavOpened()" 
 			class="app-sidenav">
+			<div class="sidenav-hero">
+				<div class="hero-surface">
+					<div class="hero-overlay"></div>
+					<div class="hero-content">
+						<span class="hero-title">Gia Phả Số</span>
+						<span class="hero-subtitle">Chuyển đổi số gia phả</span>
+					</div>
+				</div>
+			</div>
 			<div class="sidenav-header">
 				<mat-icon>account_tree</mat-icon>
 				<strong>Gia Phả Số</strong>
 			</div>
 			
 			<mat-nav-list class="nav-list">
+				<a mat-list-item 
+				   routerLink="/dashboard" 
+				   routerLinkActive="active"
+				   (click)="closeSidenavOnMobile()">
+					<mat-icon matListItemIcon>dashboard</mat-icon>
+					<span matListItemTitle>Dashboard</span>
+				</a>
 				<a mat-list-item 
 				   routerLink="/users" 
 				   routerLinkActive="active"
@@ -88,14 +115,6 @@
 					<span matListItemTitle>Nhánh quan tâm</span>
 				</a>
 				<a mat-list-item 
-				   routerLink="/backgrounds" 
-				   routerLinkActive="active"
-				   (click)="closeSidenavOnMobile()"
-				   *ngIf="permissionService.can('backgrounds', 'read')">
-					<mat-icon matListItemIcon>image</mat-icon>
-					<span matListItemTitle>Ảnh nền</span>
-				</a>
-				<a mat-list-item 
 				   routerLink="/calendar" 
 				   routerLinkActive="active"
 				   (click)="closeSidenavOnMobile()"
@@ -138,7 +157,7 @@
 			<router-outlet />
 		</mat-sidenav-content>
 	</mat-sidenav-container>
-</ng-container>
+</ng-template>
 
 <!-- Layout công khai không có sidebar -->
 <ng-template #publicLayout>

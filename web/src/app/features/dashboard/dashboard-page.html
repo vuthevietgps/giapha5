@@ -1,0 +1,145 @@
+<div class="dashboard-page">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Tổng quan</p>
+      <h1>Chào mừng, {{ userName }}</h1>
+      <p class="subtitle">Theo dõi nhanh cây gia phả và gói dịch vụ đang sử dụng.</p>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button color="primary" routerLink="/members/tree">
+        <mat-icon>account_tree</mat-icon>
+        Xem cây gia phả
+      </button>
+      <button mat-flat-button color="primary" routerLink="/families">
+        <mat-icon>diversity_3</mat-icon>
+        Quản lý dòng họ
+      </button>
+    </div>
+  </div>
+
+  <mat-card *ngIf="error" class="error-card">
+    <div class="error-content">
+      <mat-icon color="warn">error</mat-icon>
+      <div>
+        <p>{{ error }}</p>
+        <button mat-stroked-button color="primary" (click)="reload()">Thử lại</button>
+      </div>
+    </div>
+  </mat-card>
+
+  <ng-container *ngIf="!loading; else loadingState">
+    <div class="stat-grid">
+      <mat-card class="stat-card">
+        <div class="stat-icon success"><mat-icon>account_tree</mat-icon></div>
+        <div class="stat-content">
+          <p class="label">Cây gia phả</p>
+          <h2>{{ stats.families }}</h2>
+          <p class="hint">Tổng số cây đã tạo</p>
+        </div>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <div class="stat-icon info"><mat-icon>group</mat-icon></div>
+        <div class="stat-content">
+          <p class="label">Thành viên</p>
+          <h2>{{ stats.members }}</h2>
+          <p class="hint">Thành viên trong các cây</p>
+        </div>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <div class="stat-icon accent"><mat-icon>article</mat-icon></div>
+        <div class="stat-content">
+          <p class="label">Bài viết</p>
+          <h2>{{ stats.posts }}</h2>
+          <p class="hint">Bài viết đã đăng</p>
+        </div>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <div class="stat-icon muted"><mat-icon>admin_panel_settings</mat-icon></div>
+        <div class="stat-content">
+          <p class="label">Quản trị viên</p>
+          <h2>{{ stats.users }}</h2>
+          <p class="hint">Tài khoản đang hoạt động</p>
+        </div>
+      </mat-card>
+    </div>
+
+    <div class="content-grid">
+      <mat-card class="plan-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Dịch vụ hiện tại</p>
+            <h3>{{ currentPlan.name }}</h3>
+            <p class="muted">{{ currentPlan.price }} · {{ currentPlan.period }}</p>
+          </div>
+          <span class="badge">Đang dùng</span>
+        </div>
+
+        <div class="plan-meta">
+          <div><span class="label">Phả đồ trực tuyến:</span> <strong>{{ currentPlan.domain }}</strong></div>
+          <div><span class="label">Ngày bắt đầu:</span> <strong>{{ currentPlan.startedAt }}</strong></div>
+          <div><span class="label">Trạng thái:</span> <strong>{{ currentPlan.renewNote }}</strong></div>
+        </div>
+
+        <div class="usage-list">
+          <div class="usage-row" *ngFor="let item of usageLimits">
+            <div>
+              <p class="label">{{ item.label }}</p>
+              <p class="hint">{{ item.used }}{{ item.suffix || '' }} / {{ item.limit }}{{ item.suffix || '' }}</p>
+            </div>
+            <div class="usage-progress">
+              <mat-progress-bar mode="determinate" [value]="usagePercent(item)"></mat-progress-bar>
+              <span class="usage-value">{{ usagePercent(item) }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="plan-actions">
+          <button mat-stroked-button color="primary" routerLink="/posts">
+            <mat-icon>article</mat-icon>
+            Nhật ký hoạt động
+          </button>
+          <button mat-flat-button color="primary" routerLink="/members">
+            <mat-icon>group</mat-icon>
+            Quản lý thành viên
+          </button>
+        </div>
+      </mat-card>
+
+      <mat-card class="pricing-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Các gói dịch vụ</p>
+            <h3>Nâng cấp linh hoạt</h3>
+          </div>
+        </div>
+
+        <div class="pricing-grid">
+          <div class="pricing-item" *ngFor="let plan of pricingPlans" [class.highlight]="plan.highlight">
+            <div class="pricing-head">
+              <div class="pill" *ngIf="plan.highlight">Khuyên dùng</div>
+              <h4>{{ plan.name }}</h4>
+              <p class="price">{{ plan.price }} <span class="period">{{ plan.period }}</span></p>
+            </div>
+            <ul class="feature-list">
+              <li *ngFor="let feature of plan.features">
+                <mat-icon>check_circle</mat-icon>
+                <span>{{ feature }}</span>
+              </li>
+            </ul>
+            <button mat-stroked-button color="primary">{{ plan.cta }}</button>
+          </div>
+        </div>
+      </mat-card>
+    </div>
+  </ng-container>
+
+  <ng-template #loadingState>
+    <mat-card class="loading-card">
+      <mat-icon>hourglass_empty</mat-icon>
+      <p>Đang tải dữ liệu Dashboard...</p>
+    </mat-card>
+  </ng-template>
+</div>

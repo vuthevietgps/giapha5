@@ -73,6 +73,11 @@
         </mat-select>
       </mat-form-field>
 
+      <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0;">
+        <input type="checkbox" id="isMartyred" formControlName="isMartyred" style="width: 20px; height: 20px; cursor: pointer;" />
+        <label for="isMartyred" style="cursor: pointer; user-select: none;">⭐ Liệt sĩ</label>
+      </div>
+
       <mat-form-field appearance="outline">
         <mat-label>Ngày sinh</mat-label>
         <input matInput type="date" formControlName="dob" />

@@ -1,6 +1,13 @@
 /* Angular Material prebuilt theme */
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
+/* Golden Temple Theme Colors */
+:root {
+  --temple-gold: #D4AF37;
+  --temple-gold-light: #FFD700;
+  --temple-gold-dark: #B8860B;
+}
+
 /* Global styles */
 html, body {
 	height: 100%;
@@ -8,7 +15,7 @@ html, body {
 body {
 	margin: 0;
 	font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
-	background: #f6f7fb;
+	background: linear-gradient(135deg, #FFF8DC 0%, #FFFACD 50%, #FFF8DC 100%);
 	color: #1f2937;
 }
 

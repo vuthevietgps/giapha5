@@ -78,6 +78,7 @@ export class MemberForm implements OnInit {
     dod: [''],
     position: [''],
     gender: ['male'],
+    isMartyred: [false],
   });
 
   ngOnInit(): void {
@@ -99,6 +100,7 @@ export class MemberForm implements OnInit {
           dob: m.dob?.substring(0,10),
           dod: m.dod?.substring(0,10),
           position: m.position,
+          isMartyred: m.isMartyred || false,
         });
         this.originalFamilyId = m.family || null;
         if (m.family) {

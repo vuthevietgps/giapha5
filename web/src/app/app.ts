@@ -1,5 +1,5 @@
 import { Component, signal, ViewChild, OnInit, HostListener } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -34,14 +34,22 @@ export class App implements OnInit {
   isMobile = signal(false);
   sidenavMode = signal<'side' | 'over'>('side');
   sidenavOpened = signal(true);
+  isTreeCompact = signal(false);
   
   constructor(
     public authService: AuthService,
-    public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private router: Router
   ) {}
   
   ngOnInit() {
     this.checkScreenSize();
+    this.updateLayoutFlags(this.router.url);
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        this.updateLayoutFlags(event.urlAfterRedirects);
+      }
+    });
   }
   
   @HostListener('window:resize')
@@ -81,5 +89,14 @@ export class App implements OnInit {
   
   logout() {
     this.authService.logout();
+  }
+
+  private updateLayoutFlags(url: string) {
+    const clean = url.split('?')[0].split('#')[0].split(';')[0];
+    this.isTreeCompact.set(clean === '/members/tree' || clean.startsWith('/members/tree'));
+  }
+
+  goBackToDashboard() {
+    this.router.navigate(['/dashboard']);
   }
 }

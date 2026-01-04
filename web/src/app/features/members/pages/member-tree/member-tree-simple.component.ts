@@ -72,8 +72,7 @@ interface TreeConnection {
              [style.left.px]="couple.x"
              [style.top.px]="couple.y"
              [style.width.px]="couple.width"
-             [style.height.px]="couple.height"
-             [style.border-left]="'4px solid ' + couple.color">
+             [style.height.px]="couple.height">
           
           <!-- Male -->
           <div *ngIf="couple.male" class="person male">

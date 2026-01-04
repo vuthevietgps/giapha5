@@ -36,7 +36,7 @@ export class LoginPage {
   ) {
     // Nếu đã đăng nhập, chuyển về trang admin
     if (this.authService.isLoggedIn()) {
-      this.router.navigate(['/users']);
+      this.router.navigate(['/dashboard']);
     }
   }
 
@@ -48,7 +48,7 @@ export class LoginPage {
 
     const success = await this.authService.login(this.username, this.password);
     if (success) {
-      this.router.navigate(['/users']);
+      this.router.navigate(['/dashboard']);
     } else {
       this.errorMessage = 'Tên đăng nhập hoặc mật khẩu không đúng';
     }

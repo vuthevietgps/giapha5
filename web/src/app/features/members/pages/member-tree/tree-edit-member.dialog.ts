@@ -47,6 +47,10 @@ export interface EditMemberData { member: Member; }
             <mat-option value="other">Khác</mat-option>
           </mat-select>
         </mat-form-field>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0;">
+          <input type="checkbox" id="isMartyred" formControlName="isMartyred" style="width: 20px; height: 20px; cursor: pointer;" />
+          <label for="isMartyred" style="cursor: pointer; user-select: none;">⭐ Liệt sĩ</label>
+        </div>
         <mat-form-field appearance="outline">
           <mat-label>Ngày sinh</mat-label>
           <input matInput type="date" formControlName="dob" />
@@ -75,6 +79,8 @@ export interface EditMemberData { member: Member; }
     </div>
   `,
   styles: [`
+    :host { display:block; }
+    [mat-dialog-content]{max-height:70vh;overflow:auto;padding-right:4px}
     .form-grid{display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:start}
     .photo{display:flex;flex-direction:column;gap:8px}
     .photo img{width:160px;height:160px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
@@ -97,6 +103,7 @@ export class TreeEditMemberDialog {
     phone: [''],
     email: [''],
     bio: [''],
+    isMartyred: [false],
   });
 
   constructor(
@@ -112,6 +119,7 @@ export class TreeEditMemberDialog {
       phone: m.phone || '',
       email: m.email || '',
       bio: m.bio || '',
+      isMartyred: m.isMartyred || false,
     });
   }
 
@@ -151,6 +159,7 @@ export class TreeEditMemberDialog {
       phone: v.phone || undefined,
       email: v.email || undefined,
       bio: v.bio || undefined,
+      isMartyred: v.isMartyred || false,
     };
     this.membersApi.update(this.data.member.id!, payload).subscribe({
       next: _=>{ this.saving = false; this.ref.close(true); },
