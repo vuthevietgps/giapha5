@@ -1,24 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-export type ExportSize = 'A4' | 'A3' | 'HQ2x1' | 'ACTUAL' | 'ACTUAL_600';
-export type ExportOrientation = 'portrait' | 'landscape';
-
 export interface ExportOptions {
-  size: ExportSize;
-  orientation: ExportOrientation;
-  paperWidth: number;
-  paperHeight: number;
   backgroundUrl: string | null;
   backgroundFit: 'cover' | 'contain';
   familyName: string;
-}
-
-interface ExportDimension {
-  width: number;
-  height: number;
-  name: string;
-  fitMode: boolean;
+  scale?: number; // Optional: default is 2 (2x zoom)
 }
 
 interface BoundingBox {
@@ -33,6 +20,7 @@ interface BoundingBox {
 @Injectable({ providedIn: 'root' })
 export class TreeExportService {
   private snack = inject(MatSnackBar);
+  private cloneRef: HTMLElement | null = null;
 
   /**
    * Export canvas element to PNG file with specified dimensions and DPI
@@ -45,13 +33,10 @@ export class TreeExportService {
       return;
     }
 
-    const { size, orientation, paperWidth, paperHeight, backgroundUrl, backgroundFit, familyName } = options;
-    const canvasRect = canvas.getBoundingClientRect();
-    const dimensions = this.calculateDimensions(paperWidth, paperHeight);
-    const { width, height, name } = dimensions[size][orientation];
+    const { backgroundUrl, backgroundFit, familyName, scale = 2 } = options;
 
     try {
-      this.snack.open(`Đang tạo ảnh ${name}...`, undefined, { duration: 1000 });
+      this.snack.open(`Đang tạo ảnh...`, undefined, { duration: 1000 });
 
       // Wait for all images to load
       await this.waitForImages(canvas);
@@ -60,41 +45,36 @@ export class TreeExportService {
       console.log('⏳ Waiting for render to complete...');
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Calculate bounding box using viewport
-      const bounds = this.calculateBoundingBox(canvas);
-      
-      // Calculate capture scale based on export size
-      const captureScale = this.getCaptureScale(size);
-      
+      // Create an offscreen clone with full scroll size to capture everything
+      const fullClone = this.createFullHeightClone(canvas);
+      const captureW = Math.max(fullClone.scrollWidth, fullClone.clientWidth, canvas.scrollWidth);
+      const captureH = Math.max(fullClone.scrollHeight, fullClone.clientHeight, canvas.scrollHeight);
+
       console.log('🔧 Export settings:', { 
-        size, 
-        captureScale, 
-        captureW: bounds.captureW, 
-        captureH: bounds.captureH, 
-        minX: bounds.minX, 
-        minY: bounds.minY 
+        scale,
+        captureW,
+        captureH,
+        estimatedOutput: `${(captureW * scale).toFixed(0)} x ${(captureH * scale).toFixed(0)}`
       });
 
-      // Step 1: Capture canvas content - full element without restrictions
+      // Step 1: Capture full element using the offscreen clone
       console.log('🌳 Capturing content...');
-      console.log('📦 Canvas element:', {
-        tagName: canvas.tagName,
-        className: canvas.className,
-        offsetWidth: canvas.offsetWidth,
-        offsetHeight: canvas.offsetHeight,
-        scrollWidth: canvas.scrollWidth,
-        scrollHeight: canvas.scrollHeight,
-        childElements: canvas.children.length,
-        hasDecor: canvas.querySelectorAll('.decor').length,
-        hasText: canvas.querySelectorAll('.text-item').length,
-        hasCouplet: canvas.querySelectorAll('.couplet-text').length,
-        hasTree: canvas.querySelectorAll('.tree-content').length
+      console.log('📦 Clone element:', {
+        tagName: fullClone.tagName,
+        scrollWidth: fullClone.scrollWidth,
+        scrollHeight: fullClone.scrollHeight,
+        childElements: fullClone.children.length
       });
       
-      // Capture full element - let html2canvas decide bounds
-      const captured = await html2canvas(canvas, {
+      const captured = await html2canvas(fullClone, {
         backgroundColor: '#f5f5dc',
-        scale: captureScale,
+        scale: scale,
+        width: captureW,
+        height: captureH,
+        windowWidth: captureW,
+        windowHeight: captureH,
+        scrollX: 0,
+        scrollY: 0,
         logging: false,
         useCORS: true,
         allowTaint: true,
@@ -111,9 +91,9 @@ export class TreeExportService {
       );
 
       // Step 3: Download the result
-      await this.downloadCanvas(finalCanvas, familyName, name);
+      await this.downloadCanvas(finalCanvas, familyName);
 
-      this.snack.open(`Đã tải xuống ${name}`, 'Đóng', { duration: 2000 });
+      this.snack.open(`Đã tải xuống ảnh`, 'Đóng', { duration: 2000 });
 
     } catch (error: any) {
       console.error('❌ Export error:', error);
@@ -135,44 +115,58 @@ export class TreeExportService {
       console.error('📋 Error details:', {
         message: error?.message,
         stack: error?.stack,
-        exportSize: size,
-        paperSize: `${paperWidth}x${paperHeight}`
+        scale: scale
       });
       
       this.snack.open(errorMessage, 'Đóng', { duration: 4000 });
+    } finally {
+      // Clean up cloned node if it exists
+      this.removeClone();
     }
   }
 
   /**
-   * Calculate export dimensions for all paper sizes
+   * Create an offscreen clone with full scroll dimensions so html2canvas captures all content
    */
-  private calculateDimensions(actualWidth: number, actualHeight: number): Record<ExportSize, Record<ExportOrientation, ExportDimension>> {
-    return {
-      A4: {
-        portrait: { width: 2480, height: 3508, name: 'A4_Doc', fitMode: true },
-        landscape: { width: 3508, height: 2480, name: 'A4_Ngang', fitMode: true }
-      },
-      A3: {
-        portrait: { width: 3508, height: 4961, name: 'A3_Doc', fitMode: true },
-        landscape: { width: 4961, height: 3508, name: 'A3_Ngang', fitMode: true }
-      },
-      HQ2x1: {
-        portrait: { width: 9500, height: 18670, name: 'HQ2x1_9500x18670', fitMode: true },
-        landscape: { width: 18670, height: 9500, name: 'HQ2x1_18670x9500', fitMode: true }
-      },
-      ACTUAL: {
-        portrait: { width: Math.round(actualWidth * 3.125), height: Math.round(actualHeight * 3.125), name: 'Actual_300DPI', fitMode: false },
-        landscape: { width: Math.round(actualWidth * 3.125), height: Math.round(actualHeight * 3.125), name: 'Actual_300DPI', fitMode: false }
-      },
-      ACTUAL_600: {
-        portrait: { width: Math.round(actualWidth * 6.25), height: Math.round(actualHeight * 6.25), name: 'Actual_600DPI', fitMode: false },
-        landscape: { width: Math.round(actualWidth * 6.25), height: Math.round(actualHeight * 6.25), name: 'Actual_600DPI', fitMode: false }
-      }
-    };
+  private createFullHeightClone(canvas: HTMLElement): HTMLElement {
+    // Clean up any existing clone first
+    this.removeClone();
+
+    const clone = canvas.cloneNode(true) as HTMLElement;
+    const width = Math.max(canvas.scrollWidth, canvas.clientWidth, canvas.offsetWidth);
+    const height = Math.max(canvas.scrollHeight, canvas.clientHeight, canvas.offsetHeight);
+
+    Object.assign(clone.style, {
+      position: 'absolute',
+      left: '-99999px',
+      top: '0px',
+      width: `${width}px`,
+      height: `${height}px`,
+      maxWidth: 'unset',
+      maxHeight: 'unset',
+      overflow: 'visible',
+      transform: 'none',
+      pointerEvents: 'none',
+      zIndex: '-1',
+    });
+
+    document.body.appendChild(clone);
+    this.cloneRef = clone;
+    return clone;
   }
 
   /**
-   * Wait for all images in canvas to fully load
+   * Remove previously created clone
+   */
+  private removeClone(): void {
+    if (this.cloneRef && this.cloneRef.parentElement) {
+      this.cloneRef.parentElement.removeChild(this.cloneRef);
+    }
+    this.cloneRef = null;
+  }
+
+  /**
+   * Calculate bounding box including overflow elements (decorations, text)
    */
   private async waitForImages(canvas: HTMLElement): Promise<void> {
     const imgs = Array.from(canvas.querySelectorAll('img')) as HTMLImageElement[];
@@ -206,6 +200,7 @@ export class TreeExportService {
 
   /**
    * Calculate bounding box including overflow elements (decorations, text)
+   * Doubles the height to include scrollable content
    */
   private calculateBoundingBox(canvas: HTMLElement): BoundingBox {
     const canvasRect = canvas.getBoundingClientRect();
@@ -227,11 +222,19 @@ export class TreeExportService {
       maxY = Math.max(maxY, relY + rect.height);
     }
 
+    // Use scrollHeight to include all scrollable content
+    const scrollHeight = canvas.scrollHeight || maxY;
+    maxY = Math.max(maxY, scrollHeight);
+    
+    // Double the height to capture more vertical content
+    maxY = maxY * 2;
+
     const captureW = maxX - minX;
     const captureH = maxY - minY;
 
     console.log('📐 Calculated bounds:', {
       viewport: { width: canvasRect.width.toFixed(2), height: canvasRect.height.toFixed(2) },
+      scrollHeight: scrollHeight.toFixed(2),
       bounds: { minX: minX.toFixed(2), minY: minY.toFixed(2), maxX: maxX.toFixed(2), maxY: maxY.toFixed(2) },
       capture: { captureW: captureW.toFixed(2), captureH: captureH.toFixed(2) }
     });
@@ -240,17 +243,7 @@ export class TreeExportService {
   }
 
   /**
-   * Get capture scale based on export size
-   */
-  private getCaptureScale(size: ExportSize): number {
-    if (size.startsWith('ACTUAL')) {
-      return size === 'ACTUAL_600' ? 6.25 : 3.125;
-    }
-    return size === 'HQ2x1' ? 3 : 2;
-  }
-
-  /**
-   * Compose final canvas with background and captured content
+   * Download canvas as PNG file
    */
   private async composeFinalCanvas(
     captured: HTMLCanvasElement,
@@ -343,7 +336,7 @@ export class TreeExportService {
   /**
    * Download canvas as PNG file
    */
-  private async downloadCanvas(canvas: HTMLCanvasElement, familyName: string, sizeName: string): Promise<void> {
+  private async downloadCanvas(canvas: HTMLCanvasElement, familyName: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
         console.log('💾 Creating blob for download...', {
@@ -363,7 +356,7 @@ export class TreeExportService {
           
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
-          link.download = `${familyName}_${sizeName}_${new Date().getTime()}.png`;
+          link.download = `${familyName}_${new Date().getTime()}.png`;
           link.href = url;
           link.click();
           

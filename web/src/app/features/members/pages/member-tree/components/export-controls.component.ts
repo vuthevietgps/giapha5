@@ -10,9 +10,9 @@ import { MatMenuModule } from '@angular/material/menu';
   imports: [CommonModule, MatButtonModule, MatIconModule],
   styles: [`:host{display:flex;align-items:center;gap:8px;flex:0 0 auto;} button{white-space:nowrap;}`],
   template: `
-    <button mat-stroked-button (click)="export.emit({ size: 'ACTUAL', orientation: 'landscape' })">
+    <button mat-stroked-button (click)="export.emit(4)">
       <mat-icon>download</mat-icon>
-      Tải xuống
+      Tải xuống (4x HD)
     </button>
     <button mat-button (click)="reload.emit()">
       <mat-icon>refresh</mat-icon>
@@ -21,6 +21,6 @@ import { MatMenuModule } from '@angular/material/menu';
   `,
 })
 export class ExportControlsComponent {
-  @Output() export = new EventEmitter<{ size: 'A4' | 'A3' | 'HQ2x1' | 'ACTUAL' | 'ACTUAL_600'; orientation: 'portrait' | 'landscape' }>();
+  @Output() export = new EventEmitter<number>();
   @Output() reload = new EventEmitter<void>();
 }

@@ -36,7 +36,7 @@ import { TreeTextService, type CoupletData } from './services/tree-text.service'
 import { TreeTextDialog, type TextDialogResult } from './tree-text.dialog';
 import type { LayerPosition, MovableLayer } from './tree-layout';
 import { cloneDefaultPositions, cloneDefaultScales, loadPositions, persistPositions, loadScales, persistScales } from './tree-layout';
-import { TreeExportService, type ExportSize, type ExportOrientation } from './services/tree-export.service';
+import { TreeExportService } from './services/tree-export.service';
 import { TreeDecorationService, type DecorSlot, type DecorAsset } from './services/tree-decoration.service';
 import { TreeFontService, type FontItem } from './services/tree-font.service';
 
@@ -979,7 +979,7 @@ export class TreePage implements OnInit, AfterViewInit {
     });
   }
 
-  async exportToPNG(size: ExportSize, orientation: ExportOrientation = 'portrait') {
+  async exportToPNG(scale: number = 4) {
     // Use treeAreaRef instead of canvasRef to capture all overflow elements
     const captureElement = this.treeAreaEl?.nativeElement;
     if (!captureElement) {
@@ -990,10 +990,7 @@ export class TreePage implements OnInit, AfterViewInit {
     const familyName = this.families.find(f => f.id === this.selectedFamilyId)?.name || 'GiaPha';
 
     await this.exportService.exportToPNG(captureElement, {
-      size,
-      orientation,
-      paperWidth: this.paperWidth,
-      paperHeight: this.paperHeight,
+      scale,
       backgroundUrl: this.backgroundUrl,
       backgroundFit: this.backgroundFit,
       familyName

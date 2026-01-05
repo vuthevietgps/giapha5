@@ -20,7 +20,7 @@
       (openDecorDialog)="openDecorDialog()"
       (openCouplet)="openCoupletDialog()"
       [decorAssets]="decorAssets()"
-      (export)="exportToPNG($event.size, $event.orientation)"
+      (export)="exportToPNG($event)"
       (reload)="reload()"
     />
     <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey || panAlwaysEnabled" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()"

@@ -98,6 +98,6 @@ export class TreeToolbarComponent {
   @Output() addScrollText = new EventEmitter<void>();
   @Output() openDecorDialog = new EventEmitter<void>();
   @Output() openCouplet = new EventEmitter<void>();
-  @Output() export = new EventEmitter<{ size: 'A4' | 'A3' | 'HQ2x1' | 'ACTUAL' | 'ACTUAL_600'; orientation: 'portrait' | 'landscape' }>();
+  @Output() export = new EventEmitter<number>();
   @Output() reload = new EventEmitter<void>();
 }

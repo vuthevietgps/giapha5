@@ -21,6 +21,39 @@ export type DecorAssets = Record<DecorSlot, DecorAsset[]>;
 
 @Injectable({ providedIn: 'root' })
 export class TreeDecorationService {
+  // Built-in default assets (inline SVG) to ensure library is available across screens
+  private readonly defaultAssets: DecorAssets = {
+    scroll: [
+      {
+        id: 'scroll-default-1',
+        name: 'Cuốn thư vàng',
+        dataUrl:
+          'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI0MDAiIHZpZXdCb3g9IjAgMCAxMjAwIDQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZjNmMWQ2Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZWRkYjllIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3QgeD0iMTAiIHk9IjMwIiB3aWR0aD0iMTE4MCIgaGVpZ2h0PSIzNDAiIHJ4PSIzMCIgZmlsbD0idXJsKCNnKSIgc3Ryb2tlPSIjYzg4MzJiIiBzdHJva2Utd2lkdGg9IjYiLz48cmVjdCB4PSIyMCIgeT0iNjAiIHdpZHRoPSIxMTYwIiBoZWlnaHQ9IjI4MCIgcng9IjIwIiBmaWxsPSIjZmZmMmM1IiBvcGFjaXR5PSIwLjkiIHN0cm9rZT0iI2Q1Y2M1NiIgc3Ryb2tlLXdpZHRoPSI0Ii8+PHJlY3QgeD0iMzAiIHk9IjkwIiB3aWR0aD0iMTE0MCIgaGVpZ2h0PSIyMjAiIHJ4PSIxNSIgZmlsbD0iI2ZmZjdlNSIgb3BhY2l0eT0iMC45IiBzdHJva2U9IiNjOGEzMzQiIHN0cm9rZS13aWR0aD0iMyIvPjwvc3ZnPg=='
+      },
+      {
+        id: 'scroll-default-2',
+        name: 'Cuốn thư đỏ',
+        dataUrl:
+          'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI0MDAiIHZpZXdCb3g9IjAgMCAxMjAwIDQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImgiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZjRmMTAxIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZWIyOTM0Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3QgeD0iMTAiIHk9IjMwIiB3aWR0aD0iMTE4MCIgaGVpZ2h0PSIzNDAiIHJ4PSIzMCIgZmlsbD0idXJsKCNnKSIgc3Ryb2tlPSIjOTQwMDAwIiBzdHJva2Utd2lkdGg9IjYiLz48cmVjdCB4PSIyMCIgeT0iNjAiIHdpZHRoPSIxMTYwIiBoZWlnaHQ9IjI4MCIgcng9IjIwIiBmaWxsPSIjZmZlNmU2IiBvcGFjaXR5PSIwLjkiIHN0cm9rZT0iI2NhNTE1MCIgc3Rya2Utd2lkdGg9IjQiLz48cmVjdCB4PSIzMCIgeT0iOTAiIHdpZHRoPSIxMTQwIiBoZWlnaHQ9IjIyMCIgcng9IjE1IiBmaWxsPSIjZmZkNmQ3IiBvcGFjaXR5PSIwLjkiIHN0cm9rZT0iI2JhNDM0NCIgc3Rya2Utd2lkdGg9IjMiLz48L3N2Zz4='
+      }
+    ],
+    dragonLeft: [
+      {
+        id: 'dragon-left-default',
+        name: 'Rồng trái',
+        dataUrl:
+          'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjEyMDAiIHZpZXdCb3g9IjAgMCA2MDAgMTIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMzAwIDEwIGMxNDAgNjAgMTgwIDI0MCA2MCAzMDBzLTIyMCAyNzAgLTQwIDQyMGMxMCAxMTAgMTIwIDE4MCAyNDAgMTQwIDIwMC03MCAzMC0zNzAgLTEwLTUwMCIgZmlsbD0iI2ZmNDAwMCIgc3Ryb2tlPSIjOTAwMDAwIiBzdHJva2Utd2lkdGg9IjIwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4='
+      }
+    ],
+    dragonRight: [
+      {
+        id: 'dragon-right-default',
+        name: 'Rồng phải',
+        dataUrl:
+          'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjEyMDAiIHZpZXdCb3g9IjAgMCA2MDAgMTIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMzAwIDEwIGMtMTQwIDYwIC0xODAgMjQwIC02MCAzMDBzIDIyMCAyNzAgNDAgNDIwYy0xMCAxMTAtMTIwIDE4MC0yNDAgMTQwLTIwMC03MCAzMC0zNzAgMTAtNTAwIiBmaWxsPSIjZmY0MDAwIiBzdHJva2U9IiM5MDAwMDAiIHN0cm9rZS13aWR0aD0iMjAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Rya2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+'
+      }
+    ]
+  };
   // Reactive state
   decorAssets = signal<DecorAssets>({
     scroll: [],
@@ -32,12 +65,36 @@ export class TreeDecorationService {
   decorInstances = signal<DecorInstance[]>([]);
 
   /**
+   * Merge built-in defaults with user assets, keeping unique ids
+   */
+  private mergeWithDefaults(slot: DecorSlot, userAssets: DecorAsset[]): DecorAsset[] {
+    const defaults = this.defaultAssets[slot] || [];
+    const seen = new Set<string>();
+    const merged: DecorAsset[] = [];
+
+    const pushUnique = (asset: DecorAsset) => {
+      if (seen.has(asset.id)) return;
+      seen.add(asset.id);
+      merged.push(asset);
+    };
+
+    defaults.forEach(pushUnique);
+    userAssets.forEach(pushUnique);
+
+    return merged;
+  }
+
+  /**
    * Load decoration assets and instances from localStorage for a family
    */
   loadDecor(familyId: string | null): void {
     console.log('🎨 loadDecor called with familyId:', familyId);
     if (!familyId) {
-      this.decorAssets.set({ scroll: [], dragonLeft: [], dragonRight: [] });
+      this.decorAssets.set({
+        scroll: this.defaultAssets.scroll,
+        dragonLeft: this.defaultAssets.dragonLeft,
+        dragonRight: this.defaultAssets.dragonRight
+      });
       this.decorInstances.set([]);
       console.log('🎨 Cleared decor (no family)');
       return;
@@ -49,8 +106,9 @@ export class TreeDecorationService {
     slots.forEach(slot => {
       const key = this.decorKey(familyId, slot);
       const raw = localStorage.getItem(key);
-      assets[slot] = raw ? (JSON.parse(raw) as DecorAsset[]) : [];
-      console.log(`🎨 Loaded ${assets[slot].length} assets for ${slot} from ${key}`);
+      const userAssets = raw ? (JSON.parse(raw) as DecorAsset[]) : [];
+      console.log(`🎨 Loaded ${userAssets.length} assets for ${slot} from ${key}`);
+      assets[slot] = this.mergeWithDefaults(slot, userAssets);
     });
 
     this.decorAssets.set(assets);
@@ -99,9 +157,10 @@ export class TreeDecorationService {
     };
 
     const current = this.decorAssets();
+    const mergedSlotAssets = this.mergeWithDefaults(slot, [asset, ...current[slot]]);
     const updated = {
       ...current,
-      [slot]: [asset, ...current[slot]].slice(0, 8) // Keep max 8 assets per slot
+      [slot]: mergedSlotAssets.slice(0, 12) // allow a few more while keeping quota manageable
     };
 
     this.decorAssets.set(updated);
