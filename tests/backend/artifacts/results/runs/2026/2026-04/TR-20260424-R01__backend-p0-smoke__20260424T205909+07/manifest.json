@@ -1,0 +1,74 @@
+{
+  "testRunId": "TR-20260424-R01",
+  "resultId": "RS-20260424-BE-R01",
+  "startedAt": "2026-04-24T20:51:11+07:00",
+  "finishedAt": "2026-04-24T20:59:09+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "backend build smoke",
+    "backend unit regression",
+    "backend smoke e2e",
+    "tree legacy mixed-ref regression"
+  ],
+  "commands": [
+    "npm test -- --runInBand",
+    "npm run test:e2e -- --runInBand",
+    "npm run build"
+  ],
+  "cases": [
+    {
+      "id": "BE-BUILD-001",
+      "status": "PASSED"
+    },
+    {
+      "id": "BE-UNIT-001",
+      "status": "PASSED"
+    },
+    {
+      "id": "BE-E2E-001",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-TREE-001",
+      "status": "GAP FOUND -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-PUBLIC-001",
+      "status": "GAP FOUND -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-FAMILY-001",
+      "status": "GAP FOUND -> FIXED -> PASSED"
+    }
+  ],
+  "bugs": [
+    {
+      "id": "BE-TINFRA-001",
+      "title": "Smoke e2e depended on real Mongo credentials and stale root route contract",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-TREE-001",
+      "title": "Member union validation missed legacy mixed String/ObjectId partner refs",
+      "status": "FIXED -> PASSED"
+    },
+    {
+      "id": "BE-PUBLIC-001",
+      "title": "Public family member lookup and family cascade could miss legacy mixed String/ObjectId family refs",
+      "status": "FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "GET /api/subscriptions/plans public contract not yet executed",
+    "GET /api/auth/me unauth contract not yet executed",
+    "PlanLimitInterceptor invalid family handling not yet executed",
+    "payments lifecycle and idempotency not yet executed"
+  ]
+}

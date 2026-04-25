@@ -12,21 +12,13 @@ import { MemberService } from '../members/services/member';
 import { PostService } from '../posts/services/post';
 import { UserService } from '../users/services/user';
 import { AuthService } from '../../core/services/auth.service';
+import { SubscriptionService, Plan, Subscription } from '../../core/services/subscription.service';
 
 interface UsageLimit {
   label: string;
   used: number;
   limit: number;
   suffix?: string;
-}
-
-interface PricingPlan {
-  name: string;
-  price: string;
-  period: string;
-  features: string[];
-  cta: string;
-  highlight?: boolean;
 }
 
 @Component({
@@ -50,6 +42,7 @@ export class DashboardPage implements OnInit {
   private readonly memberService = inject(MemberService);
   private readonly postService = inject(PostService);
   private readonly userService = inject(UserService);
+  private readonly subscriptionService = inject(SubscriptionService);
 
   loading = true;
   error = '';
@@ -61,60 +54,23 @@ export class DashboardPage implements OnInit {
   };
 
   currentPlan = {
-    name: 'Khởi đầu',
-    price: 'Miễn phí',
-    period: 'Vĩnh viễn',
-    domain: 'hovu21.giaphadaviet.vn',
-    startedAt: '19/12/2025',
-    renewNote: 'Không giới hạn thời gian',
+    name: 'Đang tải...',
+    price: '',
+    period: '',
+    startedAt: '',
+    renewNote: '',
+    status: '',
     limits: {
-      members: 50,
-      admins: 1,
-      storageGb: 1,
+      members: 0,
+      admins: 0,
+      storageGb: 0,
     },
     usage: {
       storageGbUsed: 0.2,
     },
   };
 
-  pricingPlans: PricingPlan[] = [
-    {
-      name: 'Cơ bản',
-      price: '500.000đ',
-      period: '/12 tháng',
-      features: ['200 thành viên', '1 người quản lý', '2 GB dung lượng lưu trữ'],
-      cta: 'Nâng cấp ngay',
-    },
-    {
-      name: 'Đoàn viên',
-      price: '1.000.000đ',
-      period: '/12 tháng',
-      features: ['500 thành viên', '2 người quản lý', '3 GB dung lượng lưu trữ'],
-      cta: 'Nâng cấp ngay',
-    },
-    {
-      name: 'Đồng tâm',
-      price: '2.000.000đ',
-      period: '/12 tháng',
-      features: ['2.000 thành viên', '5 người quản lý', '10 GB dung lượng lưu trữ'],
-      cta: 'Nâng cấp ngay',
-      highlight: true,
-    },
-    {
-      name: 'Thịnh vượng',
-      price: '5.000.000đ',
-      period: '/12 tháng',
-      features: ['10.000 thành viên', '10 người quản lý', '25 GB dung lượng lưu trữ'],
-      cta: 'Nâng cấp ngay',
-    },
-    {
-      name: 'Bản sắc',
-      price: '10.000.000đ',
-      period: '/12 tháng',
-      features: ['Không giới hạn thành viên', '15 người quản lý', '50 GB dung lượng lưu trữ'],
-      cta: 'Liên hệ tư vấn',
-    },
-  ];
+  plans: Plan[] = [];
 
   ngOnInit(): void {
     this.loadStats();
@@ -137,6 +93,11 @@ export class DashboardPage implements OnInit {
     if (!usage.limit) return 0;
     const value = (usage.used / usage.limit) * 100;
     return Math.max(0, Math.min(100, Math.round(value)));
+  }
+
+  formatPrice(price: number): string {
+    if (price === 0) return 'Miễn phí';
+    return price.toLocaleString('vi-VN') + 'đ';
   }
 
   reload(): void {
@@ -163,12 +124,55 @@ export class DashboardPage implements OnInit {
             users: users.length,
           };
           this.loading = false;
+          this.loadSubscription();
+          this.loadPlans();
         },
-        error: (err) => {
-          console.error('[Dashboard] Failed to load stats', err);
+        error: () => {
           this.error = 'Không tải được dữ liệu. Vui lòng thử lại.';
           this.loading = false;
         },
+      });
+  }
+
+  private loadSubscription(): void {
+    const user = this.authService.user();
+    const familyId = user?.assignedFamily || user?.managedFamilies?.[0];
+    if (!familyId) return;
+
+    this.subscriptionService.getFamilySubscription(familyId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (sub) => {
+          if (sub) {
+            const plan = sub.plan;
+            const start = new Date(sub.startDate);
+            const end = new Date(sub.endDate);
+            this.currentPlan = {
+              name: plan?.name || 'Dùng thử',
+              price: plan ? this.formatPrice(plan.price) : 'Miễn phí',
+              period: plan ? `${plan.durationMonths} tháng` : '',
+              startedAt: start.toLocaleDateString('vi-VN'),
+              renewNote: sub.status === 'ACTIVE'
+                ? `Hết hạn ${end.toLocaleDateString('vi-VN')}`
+                : sub.status === 'PENDING_PAYMENT' ? 'Chờ thanh toán' : sub.status,
+              status: sub.status,
+              limits: {
+                members: sub.maxMembers,
+                admins: sub.maxAdmins,
+                storageGb: sub.maxStorageGb,
+              },
+              usage: { storageGbUsed: 0.2 },
+            };
+          }
+        },
+      });
+  }
+
+  private loadPlans(): void {
+    this.subscriptionService.getPlans()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (plans) => { this.plans = plans.filter(p => p.price > 0); },
       });
   }
 }

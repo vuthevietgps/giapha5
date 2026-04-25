@@ -1,4 +1,32 @@
 .toolbar {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
-.spacer { flex: 1; }
+
+.spacer {
+  flex: 1;
+}
+
+.post-list-card {
+  mat-card-title {
+    display: block;
+    margin-bottom: 12px;
+    color: var(--heritage-green-dark);
+    font-size: 22px;
+    font-weight: 820;
+  }
+
+  a[mat-list-item] {
+    margin: 4px 0;
+    border-radius: 8px;
+    transition: background 0.18s ease, transform 0.18s ease;
+
+    &:hover {
+      background: rgba(31, 90, 75, 0.07);
+      transform: translateX(2px);
+    }
+  }
+
+  mat-icon {
+    color: var(--heritage-gold);
+  }
+}

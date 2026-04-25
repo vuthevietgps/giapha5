@@ -1,0 +1,7 @@
+{
+  "testRunId": "TR-20260425-R13",
+  "resultId": "RS-20260425-BE-R13",
+  "recordedAt": "2026-04-25T00:10:44+07:00",
+  "path": "tests/backend/artifacts/results/runs/2026/2026-04/TR-20260425-R13__backend-subscriptions-my-drift-and-billing-audit-trail__20260425T001044+07/",
+  "summary": "Backend subscriptions-my drift and billing audit-trail contract executed; stale-owner subscription visibility and missing billing audit rows were reproduced, fixed, and rerun green."
+}

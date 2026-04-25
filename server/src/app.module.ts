@@ -13,11 +13,20 @@ import { PostsModule } from './posts/posts.module';
 import { BackgroundsModule } from './backgrounds/backgrounds.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthMiddleware } from './auth/middleware/auth.middleware';
+import { MailModule } from './mail/mail.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { PaymentsModule } from './payments/payments.module';
+import { createMongooseConfig } from './config/mongodb.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/giapha'),
+    MongooseModule.forRootAsync({
+      useFactory: () => createMongooseConfig(),
+    }),
+    MailModule,
+    SubscriptionsModule,
+    PaymentsModule,
     AuthModule,
     UsersModule,
     FamiliesModule,

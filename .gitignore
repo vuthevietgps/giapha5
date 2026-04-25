@@ -35,6 +35,7 @@ Thumbs.db
 server/uploads/
 web/public/assets/uploads/
 uploads/
+tmp-ui-check/
 
 # Coverage
 coverage/

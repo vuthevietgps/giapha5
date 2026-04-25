@@ -6,6 +6,7 @@ import { Union, UnionSchema } from './schemas/union.schema';
 import { Family, FamilySchema } from '../families/schemas/family.schema';
 import { Member, MemberSchema } from '../members/schemas/member.schema';
 import { AuditModule } from '../audit/audit.module';
+import { PermissionsService } from '../auth/permissions.service';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { AuditModule } from '../audit/audit.module';
     AuditModule,
   ],
   controllers: [UnionsController],
-  providers: [UnionsService],
+  providers: [UnionsService, PermissionsService],
   exports: [UnionsService],
 })
 export class UnionsModule {}

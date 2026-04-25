@@ -1,0 +1,104 @@
+{
+  "testRunId": "TR-20260424-R07",
+  "resultId": "RS-20260424-BE-R07",
+  "startedAt": "2026-04-24T22:12:33+07:00",
+  "finishedAt": "2026-04-24T22:20:24+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "malformed union write contract",
+    "malformed union consume contract",
+    "binary-partner enforcement",
+    "targeted bug reproduction and fix",
+    "full backend e2e regression",
+    "unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand server/test/members/members-tree.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/members/members-tree.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build",
+    "npm test -- --runInBand"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "PASSED" },
+    { "id": "BE-UNIT-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-PUBLIC-001", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PUBLIC-002", "status": "PASSED" },
+    { "id": "BE-PUBLIC-003", "status": "PASSED" },
+    { "id": "BE-PUBLIC-004", "status": "PASSED" },
+    { "id": "BE-PUBLIC-005", "status": "PASSED" },
+    { "id": "BE-PUBLIC-006", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PUBLIC-007", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-001", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-TREE-002", "status": "PASSED" },
+    { "id": "BE-TREE-003", "status": "PASSED" },
+    { "id": "BE-TREE-004", "status": "PASSED" },
+    { "id": "BE-TREE-005", "status": "PASSED" },
+    { "id": "BE-TREE-006", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-007", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-008", "status": "PASSED" },
+    { "id": "BE-TREE-009", "status": "PASSED" },
+    { "id": "BE-TREE-010", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-011", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-012", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-013", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-014", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-015", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-016", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-017", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-018", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-019", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-020", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-FAMILY-001", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-AUTH-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-AUTH-002", "status": "PASSED" },
+    { "id": "BE-AUTH-003", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-002", "status": "PASSED" },
+    { "id": "BE-SUBS-003", "status": "PASSED" },
+    { "id": "BE-SUBS-004", "status": "PASSED" },
+    { "id": "BE-PLAN-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-001", "status": "PASSED" },
+    { "id": "BE-PAY-002", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-003", "status": "PASSED" },
+    { "id": "BE-PAY-004", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-005", "status": "PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-TREE-018",
+      "title": "POST /api/unions accepted single-partner and 3+ distinct-partner payloads and persisted malformed unions",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-TREE-019",
+      "title": "PATCH /api/unions/:id accepted malformed partner arrays and rewrote valid unions into ambiguous shapes",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-TREE-020",
+      "title": "reparent accepted malformed legacy unionId payloads and rewrote father/mother from ambiguous partner arrays",
+      "status": "FAILED -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "Valid 2-partner unions whose genders do not map cleanly to one father and one mother still lack execution proof for reparent and related tree flows",
+    "Duplicate valid pair unions are still not prevented by a uniqueness guarantee at the DB layer",
+    "VNPay return/verify contracts not yet executed",
+    "register rollback on partial side-effect failure not yet executed",
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "true payment concurrency/race behavior not yet executed",
+    "billing-history list visibility policy for /api/subscriptions/payments remains unresolved",
+    "public contract still has no dedicated unions payload; completeness currently relies on spouse inference in members"
+  ]
+}

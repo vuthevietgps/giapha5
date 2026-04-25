@@ -13,4 +13,39 @@
 
 .table-wrapper {
 	overflow: auto;
+
+	table {
+		width: 100%;
+	}
+}
+
+.action-buttons {
+	display: flex;
+	gap: 8px;
+	flex-wrap: nowrap;
+}
+
+// Responsive
+@media (max-width: 768px) {
+	.filters-form {
+		grid-template-columns: 1fr;
+		gap: 8px;
+	}
+}
+
+@media (max-width: 600px) {
+	.users-toolbar {
+		a[mat-flat-button] {
+			min-width: auto;
+			padding: 0 12px;
+
+			mat-icon {
+				margin: 0;
+			}
+
+			span.btn-text {
+				display: none;
+			}
+		}
+	}
 }

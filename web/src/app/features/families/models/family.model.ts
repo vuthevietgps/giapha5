@@ -4,4 +4,7 @@ export interface Family {
   contactName: string; // Tên người liên hệ
   contactPhone?: string; // SĐT người liên hệ
   address?: string; // Địa chỉ dòng họ
+  rootMember?: string;
+  shareToken?: string;
+  isPublic?: boolean;
 }

@@ -5,7 +5,7 @@
 - **Domain**: dongtocvietnam.com
 - **Server IP**: 192.168.100.237
 - **Backend Port**: 3000
-- **Frontend Port**: 8091 (internal), 80/443 (via Cloudflare)
+- **Frontend Port**: configurable via `FRONTEND_PORT` (default `8096`)
 - **Images**: 
   - `vutheviet/giapha5:server-version7`
   - `vutheviet/giapha5:web-version7`
@@ -32,6 +32,12 @@ systemctl status cloudflared
 3. **Permissions**
 ```bash
 # User cần có quyền sudo hoặc chạy với root
+```
+
+4. **MongoDB Atlas URI**
+```bash
+# Bắt buộc phải có URI MongoDB Atlas hợp lệ
+# Không dùng fallback localhost khi deploy production
 ```
 
 ---
@@ -68,6 +74,11 @@ sudo ./deploy-dongtocvietnam.sh
 Script sẽ yêu cầu nhập MongoDB URI. Nhập connection string của MongoDB Atlas:
 ```
 mongodb+srv://username:password@cluster.mongodb.net/giapha?retryWrites=true&w=majority
+```
+
+Nếu Atlas user authenticate qua `admin`, nhập thêm:
+```bash
+MONGODB_AUTH_SOURCE=admin
 ```
 
 ### Bước 4: Cấu hình Cloudflare
@@ -126,13 +137,14 @@ mongodb+srv://username:password@cluster.mongodb.net/giapha?retryWrites=true&w=ma
 └── uploads-data/           # Volume cho uploads (auto-created)
 ```
 
-**Note:** Port 8091 được chọn vì port 8090 đã bị htxbachgia-shop sử dụng.
+**Note:** Frontend port được lấy từ biến `FRONTEND_PORT` và mặc định là `8096`.
 
 ### File docker-compose.yml
 
 Được tạo tự động bởi script với:
-- Backend: port 3000
-- Frontend: port 8090 → expose qua Cloudflare
+- Backend: port `BACKEND_PORT` (mặc định `3000`)
+- Frontend: port `FRONTEND_PORT` (mặc định `8096`) → expose qua Cloudflare
+- MongoDB: kết nối tới MongoDB Atlas qua `MONGODB_URI`
 - Traefik labels cho routing
 - Health checks
 

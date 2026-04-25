@@ -1,0 +1,58 @@
+{
+  "testRunId": "TR-20260425-R13",
+  "resultId": "RS-20260425-BE-R13",
+  "startedAt": "2026-04-25T00:05:34+07:00",
+  "finishedAt": "2026-04-25T00:10:44+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "subscriptions-my ownership drift",
+    "billing audit trail for manual confirm and signed gateway success",
+    "targeted bug reproduction and fix",
+    "full backend e2e regression",
+    "unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand server/test/subscriptions/billing-report-visibility.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/payments/billing-audit-trail.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/subscriptions/billing-report-visibility.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/payments/billing-audit-trail.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-UNIT-001", "status": "PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-SUBS-005", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-AUDIT-001", "status": "FAILED -> FIXED -> PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-SUBS-005",
+      "title": "GET /api/subscriptions/my retained old-family subscription rows after the creator was reassigned",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-AUDIT-001",
+      "title": "manual payment confirmation and signed gateway success changed billing state without family-scoped audit rows",
+      "status": "FAILED -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "owner-only /api/subscriptions/payments still leaves manager/director reconciliation and reporting enumeration unresolved",
+    "billing audit success-path proof exists, but idempotent, rejected, and rolled-back audit behavior is still unexecuted",
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "duplicate valid pair unions are still not prevented by a uniqueness guarantee at the DB layer",
+    "public contract still has no dedicated unions payload; completeness currently relies on spouse inference in members"
+  ]
+}

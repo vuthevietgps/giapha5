@@ -28,4 +28,8 @@ export class FamilyService {
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
+
+  toggleShare(id: string): Observable<{ isPublic: boolean; shareToken: string | null }> {
+    return this.http.post<{ isPublic: boolean; shareToken: string | null }>(`${this.baseUrl}/${id}/toggle-share`, {});
+  }
 }

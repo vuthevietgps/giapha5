@@ -3,6 +3,10 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { LandingPage } from './features/landing/landing-page';
 import { LoginPage } from './features/auth/login-page';
+import { RegisterPage } from './features/auth/register-page';
+import { ForgotPasswordPage } from './features/auth/forgot-password-page';
+import { ResetPasswordPage } from './features/auth/reset-password-page';
+import { VerifyEmailPage } from './features/auth/verify-email-page';
 import { AuthService } from './core/services/auth.service';
 import { UserList } from './features/users/pages/user-list/user-list';
 import { UserForm } from './features/users/pages/user-form/user-form';
@@ -18,7 +22,13 @@ import { PostDetail } from './features/posts/pages/post-detail/post-detail';
 import { CalendarPage } from './features/calendar/calendar-page';
 import { BranchPage } from './features/members/pages/member-branch/branch-page';
 import { BranchCalendarPage } from './features/members/pages/member-branch/branch-calendar-page';
+import { PrintPage } from './features/printing/print-page';
 import { DashboardPage } from './features/dashboard/dashboard-page';
+import { PlansPage } from './features/subscription/plans-page';
+import { PaymentPage } from './features/subscription/payment-page';
+import { PaymentCallbackPage } from './features/subscription/payment-callback-page';
+import { PublicTreePage } from './features/families/pages/public-tree-page';
+import { NotFoundPage } from './features/common/not-found-page';
 
 // Auth guard function
 const authGuard = () => {
@@ -37,7 +47,15 @@ export const routes: Routes = [
 	{ path: '', component: LandingPage, title: 'Trang chủ - Gia Phả Số' },
 	{ path: 'home', component: LandingPage, title: 'Trang chủ - Gia Phả Số' },
 	{ path: 'login', component: LoginPage, title: 'Đăng nhập - Gia Phả Số' },
+	{ path: 'register', component: RegisterPage, title: 'Đăng ký - Gia Phả Số' },
+	{ path: 'forgot-password', component: ForgotPasswordPage, title: 'Quên mật khẩu - Gia Phả Số' },
+	{ path: 'reset-password', component: ResetPasswordPage, title: 'Đặt lại mật khẩu - Gia Phả Số' },
+	{ path: 'verify-email', component: VerifyEmailPage, title: 'Xác thực email - Gia Phả Số' },
+	{ path: 'share/:token', component: PublicTreePage, title: 'Xem gia phả - Gia Phả Số' },
 	{ path: 'dashboard', component: DashboardPage, title: 'Tổng quan', canActivate: [authGuard] },
+	{ path: 'plans', component: PlansPage, title: 'Gói dịch vụ - Gia Phả Số', canActivate: [authGuard] },
+	{ path: 'payment', component: PaymentPage, title: 'Thanh toán - Gia Phả Số', canActivate: [authGuard] },
+	{ path: 'payment/callback', component: PaymentCallbackPage, title: 'Kết quả thanh toán - Gia Phả Số' },
 	{ path: 'users', component: UserList, title: 'Quản lý người dùng', canActivate: [authGuard] },
 	{ path: 'users/new', component: UserForm, title: 'Thêm người dùng', canActivate: [authGuard] },
 	{ path: 'users/:id/edit', component: UserForm, title: 'Sửa người dùng', canActivate: [authGuard] },
@@ -56,4 +74,6 @@ export const routes: Routes = [
 	{ path: 'members/branch', component: BranchPage, title: 'Nhánh quan tâm', canActivate: [authGuard] },
 	{ path: 'members/branch-calendar', component: BranchCalendarPage, title: 'Lịch quan trọng (nhánh)', canActivate: [authGuard] },
 	{ path: 'calendar', component: CalendarPage, title: 'Lịch vạn niên', canActivate: [authGuard] },
+	{ path: 'print', component: PrintPage, title: 'In gia phả', canActivate: [authGuard] },
+	{ path: '**', component: NotFoundPage, title: '404 - Gia Phả Số' },
 ];

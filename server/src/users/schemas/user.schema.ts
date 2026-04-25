@@ -29,6 +29,24 @@ export class User {
 
   @Prop({ type: String, ref: 'Family' })
   assignedFamily?: string; // Cho NHAN_VIEN và TRUONG_HO: dòng họ được chỉ định
+
+  @Prop({ default: false })
+  isEmailVerified: boolean;
+
+  @Prop({ select: false })
+  emailVerifyToken?: string;
+
+  @Prop()
+  emailVerifyExpires?: Date;
+
+  @Prop({ select: false })
+  passwordResetToken?: string;
+
+  @Prop()
+  passwordResetExpires?: Date;
+
+  @Prop({ select: false })
+  refreshToken?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

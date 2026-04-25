@@ -50,35 +50,95 @@
 
   <!-- Hero Section -->
   <section class="hero">
+    <img class="hero-bg-image" src="/assets/landing/hero-ancestral-hall.webp" alt="" aria-hidden="true" />
     <div class="hero-background">
       <div class="hero-overlay"></div>
     </div>
     <div class="container hero-content">
       <div class="hero-text">
+        <p class="heritage-kicker animate-fade-in">Từ đường số - Gia phả Việt</p>
         <h1 class="hero-title animate-fade-in">
-          Chuyển Đổi Số <br>
-          <span class="highlight">Gia Phả Việt</span>
+          Gìn giữ <br>
+          gốc tích <br>
+          <span class="highlight">trong không <br>gian số</span>
         </h1>
         <p class="hero-subtitle animate-fade-in-delay">
-          Bảo tồn di sản dòng họ - Kết nối thế hệ tương lai
+          Một nền tảng trang trọng cho dòng họ, gia phong và ký ức tổ tiên
         </p>
         <p class="hero-description animate-fade-in-delay-2">
-          Giải pháp số hóa gia phả hiện đại, dễ dàng quản lý và chia sẻ thông tin dòng họ trên nền tảng trực tuyến
+          Thiết kế như một thư phòng gia tộc: trầm tĩnh, mạch lạc, tôn trọng tư liệu cũ nhưng đủ chuẩn để quản lý phả hệ, nhân sự và sự kiện hôm nay.
         </p>
+        <div class="hero-principles animate-fade-in-delay-2">
+          <span>Gia phong</span>
+          <span>Tộc phả</span>
+          <span>Tư liệu</span>
+        </div>
         <div class="hero-actions animate-fade-in-delay-3">
           <button mat-raised-button color="primary" class="cta-primary" (click)="scrollToSection('pricing')">
-            <mat-icon>rocket_launch</mat-icon>
-            Trải nghiệm ngay
+            <mat-icon>history_edu</mat-icon>
+            Bắt đầu lưu phả
           </button>
           <button mat-stroked-button class="cta-secondary" (click)="scrollToSection('features')">
-            <mat-icon>info</mat-icon>
-            Tìm hiểu thêm
+            <mat-icon>account_tree</mat-icon>
+            Xem cấu trúc phả hệ
           </button>
         </div>
       </div>
-      <div class="hero-image animate-slide-in">
-        <div class="tree-illustration">
-          <mat-icon class="tree-icon">account_tree</mat-icon>
+      <div class="hero-visual animate-slide-in">
+        <div class="hero-photo-card">
+          <img src="/assets/landing/hero-ancestral-hall.webp" alt="Không gian từ đường Á Đông với sổ gia phả và phả đồ số" />
+          <div class="hero-photo-badge">
+            <mat-icon>auto_stories</mat-icon>
+            <span>Không gian lưu giữ tộc phả</span>
+          </div>
+          <div class="hero-slide-caption">
+            <span>Nếp nhà - dòng tộc - ký ức</span>
+            <strong>Một giao diện số nhưng giữ được sự tĩnh tại của gia đường.</strong>
+          </div>
+        </div>
+        <div class="hero-popup-card popup-branch">
+          <mat-icon>account_tree</mat-icon>
+          <div>
+            <strong>Phả hệ nhiều đời</strong>
+            <span>mỗi chi nhánh có trật tự và vai vế</span>
+          </div>
+        </div>
+        <div class="hero-popup-card popup-album">
+          <mat-icon>local_library</mat-icon>
+          <div>
+            <strong>Tư liệu gia tộc</strong>
+            <span>ảnh, văn bản, ngày giỗ và chuyện xưa</span>
+          </div>
+        </div>
+        <div class="hero-mini-card">
+          <mat-icon>workspace_premium</mat-icon>
+          <div>
+            <strong>Tôn ti rõ ràng</strong>
+            <span>quản lý thành viên theo vai trò và đời thứ</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container hero-slider" aria-label="Các khu vực nổi bật">
+      <div class="slide-tile active">
+        <img src="/assets/landing/feature-tree.webp" alt="Ảnh minh họa phả đồ nhiều thế hệ" />
+        <div>
+          <span>Phả hệ</span>
+          <strong>Mạch đời được trình bày mạch lạc</strong>
+        </div>
+      </div>
+      <div class="slide-tile">
+        <img src="/assets/landing/feature-members.webp" alt="Ảnh minh họa quản lý thành viên dòng họ" />
+        <div>
+          <span>Hồ sơ</span>
+          <strong>Vai vế, quan hệ và thông tin rõ ràng</strong>
+        </div>
+      </div>
+      <div class="slide-tile">
+        <img src="/assets/landing/feature-album.webp" alt="Ảnh minh họa lưu giữ tư liệu gia đình" />
+        <div>
+          <span>Ký ức</span>
+          <strong>Lưu ảnh, văn bản và chuyện dòng họ</strong>
         </div>
       </div>
     </div>
@@ -98,12 +158,53 @@
       </div>
       <div class="features-grid">
         <mat-card class="feature-card" *ngFor="let feature of features">
-          <div class="feature-icon">
-            <mat-icon>{{feature.icon}}</mat-icon>
+          <div class="feature-media">
+            <img [src]="feature.image" [alt]="feature.title" loading="lazy" />
           </div>
-          <h3 class="feature-title">{{feature.title}}</h3>
-          <p class="feature-description">{{feature.description}}</p>
+          <div class="feature-content">
+            <div class="feature-icon">
+              <mat-icon>{{feature.icon}}</mat-icon>
+            </div>
+            <p class="feature-eyebrow">{{feature.eyebrow}}</p>
+            <h3 class="feature-title">{{feature.title}}</h3>
+            <p class="feature-description">{{feature.description}}</p>
+          </div>
         </mat-card>
+      </div>
+    </div>
+  </section>
+
+  <section class="showcase">
+    <div class="container">
+      <div class="showcase-header">
+        <p class="eyebrow-label">Quy trình sử dụng</p>
+        <h2>Biến tư liệu dòng họ thành một không gian số dễ tra cứu</h2>
+      </div>
+      <div class="showcase-grid">
+        <article class="showcase-item">
+          <img src="/assets/landing/feature-members.webp" alt="Quản lý hồ sơ thành viên dòng họ" loading="lazy" />
+          <div>
+            <span>01</span>
+            <h3>Nhập hồ sơ thành viên</h3>
+            <p>Tập trung thông tin cá nhân, quan hệ cha mẹ, hôn phối, vai trò và liên hệ trong một giao diện rõ ràng.</p>
+          </div>
+        </article>
+        <article class="showcase-item featured">
+          <img src="/assets/landing/feature-tree.webp" alt="Xây dựng cây gia phả nhiều thế hệ" loading="lazy" />
+          <div>
+            <span>02</span>
+            <h3>Dựng cây nhiều thế hệ</h3>
+            <p>Tự động kết nối nhánh, xem theo đời, phóng to thu nhỏ và xuất phả đồ để phục vụ họp họ hoặc in ấn.</p>
+          </div>
+        </article>
+        <article class="showcase-item">
+          <img src="/assets/landing/feature-album.webp" alt="Lưu giữ ảnh và tư liệu dòng họ" loading="lazy" />
+          <div>
+            <span>03</span>
+            <h3>Lưu giữ tư liệu gia đình</h3>
+            <p>Ảnh, bài viết và ngày kỷ niệm được gom lại thành kho tư liệu sống, dễ chia sẻ cho thế hệ sau.</p>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -155,9 +256,7 @@
     <div class="container">
       <div class="about-content">
         <div class="about-image">
-          <div class="image-placeholder">
-            <mat-icon>family_restroom</mat-icon>
-          </div>
+          <img src="/assets/landing/feature-cloud.webp" alt="Kho lưu trữ tư liệu gia phả trực tuyến" loading="lazy" />
         </div>
         <div class="about-text">
           <h2 class="section-title">Bảo tồn di sản dòng họ</h2>

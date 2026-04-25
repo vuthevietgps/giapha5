@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, DestroyRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,12 +12,16 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { firstValueFrom } from 'rxjs';
 import { UserService } from '../../services/user';
 import type { User } from '../../models/user.model';
 import { USER_ROLES, USER_ROLE_LABELS } from '../../models/user.model';
 import { FamilyService } from '../../../families/services/family';
 import { Family } from '../../../families/models/family.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { ConfirmDialogComponent } from '../../../../core/ui/confirm-dialog';
 
 @Component({
   selector: 'app-user-list',
@@ -34,6 +39,8 @@ import { PermissionService } from '../../../../core/services/permission.service'
     MatSelectModule,
     MatToolbarModule,
     MatChipsModule,
+    MatTooltipModule,
+    MatDialogModule,
   ],
   templateUrl: './user-list.html',
   styleUrl: './user-list.scss',
@@ -42,7 +49,9 @@ export class UserList {
   private readonly userService = inject(UserService);
   private readonly familyService = inject(FamilyService);
   private readonly permissionService = inject(PermissionService);
+  private readonly dialog = inject(MatDialog);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
   displayedColumns = ['fullName', 'email', 'role', 'families', 'actions'];
   data: User[] = [];
   filteredData: User[] = [];
@@ -63,7 +72,7 @@ export class UserList {
       });
       this.load();
     });
-    this.filterForm.valueChanges.subscribe(() => this.applyFilter());
+    this.filterForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.applyFilter());
   }
 
   load() {
@@ -88,11 +97,20 @@ export class UserList {
     return [];
   }
 
-  delete(id?: string) {
+  async delete(id?: string) {
     if (!id) return;
-    if (confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
-      this.userService.delete(id).subscribe(() => this.load());
-    }
+    const confirmed = await firstValueFrom(
+      this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Xóa người dùng',
+          message: 'Bạn có chắc muốn xóa người dùng này?',
+          confirmText: 'Xóa người dùng',
+          tone: 'warn',
+        },
+      }).afterClosed(),
+    );
+    if (!confirmed) return;
+    this.userService.delete(id).subscribe(() => this.load());
   }
 
   applyFilter() {

@@ -5,8 +5,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -19,38 +20,43 @@ import { AuthService } from '../../core/services/auth.service';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    MatProgressSpinnerModule,
     FormsModule,
+    RouterLink,
   ],
   templateUrl: './login-page.html',
   styleUrls: ['./login-page.scss']
 })
 export class LoginPage {
-  username = '';
+  email = '';
   password = '';
   hidePassword = true;
+  loading = false;
   errorMessage = '';
 
   constructor(
     private authService: AuthService,
     private router: Router
   ) {
-    // Nếu đã đăng nhập, chuyển về trang admin
     if (this.authService.isLoggedIn()) {
       this.router.navigate(['/dashboard']);
     }
   }
 
   async login() {
-    if (!this.username || !this.password) {
+    if (!this.email || !this.password) {
       this.errorMessage = 'Vui lòng nhập đầy đủ thông tin';
       return;
     }
 
-    const success = await this.authService.login(this.username, this.password);
-    if (success) {
+    this.loading = true;
+    this.errorMessage = '';
+    const result = await this.authService.login(this.email, this.password);
+    this.loading = false;
+    if (result.success) {
       this.router.navigate(['/dashboard']);
     } else {
-      this.errorMessage = 'Tên đăng nhập hoặc mật khẩu không đúng';
+      this.errorMessage = result.message;
     }
   }
 }

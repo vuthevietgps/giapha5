@@ -37,18 +37,15 @@ export class TreeTextService {
    * Load text items from localStorage for a family
    */
   loadTextItems(familyId: string | null): void {
-    console.log('📝 loadTextItems called with familyId:', familyId);
     const key = this.textsKey(familyId);
     if (!key) {
       this.textItems.set([]);
-      console.log('📝 Cleared text items (no key)');
       return;
     }
 
     const raw = localStorage.getItem(key);
     if (!raw) {
       this.textItems.set([]);
-      console.log('📝 No text items found in localStorage for', key);
       return;
     }
 
@@ -56,7 +53,6 @@ export class TreeTextService {
       const parsed = JSON.parse(raw) as TextItem[];
       if (!Array.isArray(parsed)) {
         this.textItems.set([]);
-        console.log('📝 Invalid text items data (not array)');
         return;
       }
       
@@ -66,11 +62,9 @@ export class TreeTextService {
         curvature: typeof (it as any).curvature === 'number' ? (it as any).curvature : 0,
       }));
       
-      console.log(`📝 Loaded ${items.length} text items from ${key}`);
       this.textItems.set(items);
     } catch {
       this.textItems.set([]);
-      console.log('📝 Failed to parse text items');
     }
   }
 

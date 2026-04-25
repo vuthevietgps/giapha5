@@ -1,0 +1,73 @@
+{
+  "testRunId": "TR-20260424-R10",
+  "resultId": "RS-20260424-BE-R10",
+  "startedAt": "2026-04-24T23:13:24+07:00",
+  "finishedAt": "2026-04-24T23:20:25+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "payments confirm atomicity fault injection",
+    "parallel duplicate payment-create race",
+    "concurrent manual-confirm idempotency",
+    "billing visibility contract for GET /api/subscriptions/payments",
+    "targeted bug reproduction and fix",
+    "full backend e2e regression",
+    "unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand server/test/payments/payments-confirm-atomicity.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/subscriptions/subscriptions-access.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/payments/payments-confirm-atomicity.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/subscriptions/subscriptions-access.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/subscriptions/subscriptions-payments.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/subscriptions/subscriptions-payments.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/payments/payments-confirm-atomicity.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/subscriptions/subscriptions-payments.contract.e2e-spec.ts server/test/subscriptions/subscriptions-access.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-UNIT-001", "status": "PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-SUBS-003", "status": "PASSED" },
+    { "id": "BE-SUBS-004", "status": "PASSED" },
+    { "id": "BE-PAY-001", "status": "PASSED" },
+    { "id": "BE-PAY-002", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-004", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-005", "status": "PASSED" },
+    { "id": "BE-PAY-006", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-007", "status": "PASSED" },
+    { "id": "BE-PAY-017", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-019", "status": "PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-PAY-006",
+      "title": "parallel duplicate payment-create requests returned different pending payment and subscription ids for the same upgrade",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-PAY-017",
+      "title": "payment confirmation could leave payment SUCCESS while the target subscription remained PENDING_PAYMENT after activation failed",
+      "status": "FAILED -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "register rollback on partial side-effect failure not yet executed",
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "duplicate valid pair unions are still not prevented by a uniqueness guarantee at the DB layer",
+    "VNPay callbacks still lack execution proof for stored amount/method/state invariant validation before confirmation",
+    "billing/report policy beyond the current owner-only /api/subscriptions/payments contract remains open for creator-drift behavior and low-privilege family readers",
+    "public contract still has no dedicated unions payload; completeness currently relies on spouse inference in members"
+  ]
+}

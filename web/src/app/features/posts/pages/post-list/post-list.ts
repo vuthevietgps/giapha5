@@ -10,6 +10,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PostService } from '../../services/post';
 import type { PostModel } from '../../models/post.model';
 import { PostFormDialog } from '../post-form/post-form';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-post-list',
@@ -30,8 +31,10 @@ import { PostFormDialog } from '../post-form/post-form';
 export class PostList {
   private readonly postService = inject(PostService);
   private readonly dialog = inject(MatDialog);
+  private readonly permissionService = inject(PermissionService);
 
   posts: PostModel[] = [];
+  readonly canCreatePosts = this.permissionService.can('posts', 'create');
 
   constructor() {
     this.load();

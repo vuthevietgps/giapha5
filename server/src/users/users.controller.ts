@@ -14,8 +14,8 @@ export class UsersController {
 	@Post()
 	@Resource('users')
 	@Action('create')
-	create(@Body() dto: CreateUserDto) {
-		return this.usersService.create(dto);
+	create(@CurrentUser() currentUser: AuthUser, @Body() dto: CreateUserDto) {
+		return this.usersService.create(currentUser, dto);
 	}
 
 	@Get()
@@ -28,21 +28,21 @@ export class UsersController {
 	@Get(':id')
 	@Resource('users')
 	@Action('read')
-	findOne(@Param('id') id: string) {
-		return this.usersService.findOne(id);
-	}
+  findOne(@CurrentUser() currentUser: AuthUser, @Param('id') id: string) {
+    return this.usersService.findOne(currentUser, id);
+  }
 
 	@Patch(':id')
 	@Resource('users')
 	@Action('update')
-	update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-		return this.usersService.update(id, dto);
+	update(@CurrentUser() currentUser: AuthUser, @Param('id') id: string, @Body() dto: UpdateUserDto) {
+		return this.usersService.update(currentUser, id, dto);
 	}
 
 	@Delete(':id')
 	@Resource('users')
 	@Action('delete')
-	remove(@Param('id') id: string) {
-		return this.usersService.remove(id);
+	remove(@CurrentUser() currentUser: AuthUser, @Param('id') id: string) {
+		return this.usersService.remove(currentUser, id);
 	}
 }

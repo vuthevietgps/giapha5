@@ -1,0 +1,60 @@
+{
+  "testRunId": "TR-20260424-R12",
+  "resultId": "RS-20260424-BE-R12",
+  "startedAt": "2026-04-24T23:51:42+07:00",
+  "finishedAt": "2026-04-24T23:55:06+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "billing creator-drift visibility",
+    "low-privilege same-family payment-reader policy",
+    "targeted bug reproduction and fix",
+    "billing regression rerun",
+    "full backend e2e regression",
+    "unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand server/test/subscriptions/billing-policy-drift.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/subscriptions/billing-policy-drift.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/subscriptions/billing-policy-drift.contract.e2e-spec.ts server/test/subscriptions/subscriptions-access.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "PASSED" },
+    { "id": "BE-UNIT-001", "status": "PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-PAY-005", "status": "PASSED" },
+    { "id": "BE-PAY-007", "status": "PASSED" },
+    { "id": "BE-PAY-020", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-021", "status": "FAILED -> FIXED -> PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-PAY-020",
+      "title": "reassigned payment creators retained old-family payment status and billing-row access after assignment drift",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-PAY-021",
+      "title": "same-family NHAN_VIEN and TRUONG_HO users could read another user's payment status by id",
+      "status": "FAILED -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "owner-only /api/subscriptions/payments still leaves manager/director reconciliation and reporting enumeration unresolved",
+    "/api/subscriptions/my ownership-drift semantics are still unexecuted",
+    "billing state changes still have no audit-trail execution proof and appear to lack dedicated audit logging by inspection",
+    "duplicate valid pair unions are still not prevented by a uniqueness guarantee at the DB layer",
+    "public contract still has no dedicated unions payload; completeness currently relies on spouse inference in members"
+  ]
+}

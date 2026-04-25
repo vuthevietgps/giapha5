@@ -1,0 +1,57 @@
+{
+  "testRunId": "TR-20260424-R03",
+  "resultId": "RS-20260424-BE-R03",
+  "startedAt": "2026-04-24T21:19:58+07:00",
+  "finishedAt": "2026-04-24T21:21:25+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "backend subscriptions family-scope access",
+    "backend payment duplicate-create sequential idempotency",
+    "full backend e2e regression",
+    "full backend unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand test/subscriptions",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "PASSED" },
+    { "id": "BE-UNIT-001", "status": "PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-SUBS-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-002", "status": "PASSED" },
+    { "id": "BE-SUBS-003", "status": "PASSED" },
+    { "id": "BE-SUBS-004", "status": "PASSED" },
+    { "id": "BE-PLAN-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-001", "status": "PASSED" },
+    { "id": "BE-PAY-002", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-003", "status": "PASSED" },
+    { "id": "BE-PAY-004", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-005", "status": "PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-PAY-004",
+      "title": "Sequential duplicate payment creation produced duplicate pending subscriptions and payments",
+      "status": "GAP FOUND -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "VNPay return/verify contracts not yet executed",
+    "family public-share and tree relationship e2e not yet executed",
+    "register rollback on partial side-effect failure not yet executed",
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "true payment concurrency/race behavior not yet executed",
+    "billing-history list visibility policy for /api/subscriptions/payments remains unresolved"
+  ]
+}

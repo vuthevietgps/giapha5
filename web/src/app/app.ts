@@ -1,4 +1,4 @@
-import { Component, signal, ViewChild, OnInit, HostListener } from '@angular/core';
+import { Component, signal, ViewChild, OnInit, HostListener, DestroyRef, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
@@ -7,8 +7,11 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from './core/services/auth.service';
 import { PermissionService } from './core/services/permission.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -23,6 +26,7 @@ import { PermissionService } from './core/services/permission.service';
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
+    MatDividerModule,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -36,6 +40,8 @@ export class App implements OnInit {
   sidenavOpened = signal(true);
   isTreeCompact = signal(false);
   
+  private destroyRef = inject(DestroyRef);
+
   constructor(
     public authService: AuthService,
     public permissionService: PermissionService,
@@ -45,10 +51,11 @@ export class App implements OnInit {
   ngOnInit() {
     this.checkScreenSize();
     this.updateLayoutFlags(this.router.url);
-    this.router.events.subscribe(event => {
-      if (event instanceof NavigationEnd) {
-        this.updateLayoutFlags(event.urlAfterRedirects);
-      }
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(event => {
+      this.updateLayoutFlags((event as NavigationEnd).urlAfterRedirects);
     });
   }
   

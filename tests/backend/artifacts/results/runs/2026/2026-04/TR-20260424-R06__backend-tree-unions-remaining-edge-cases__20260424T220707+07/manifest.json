@@ -1,0 +1,95 @@
+{
+  "testRunId": "TR-20260424-R06",
+  "resultId": "RS-20260424-BE-R06",
+  "startedAt": "2026-04-24T22:03:48+07:00",
+  "finishedAt": "2026-04-24T22:07:07+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "backend tree/unions remaining edge cases",
+    "unsupported parent gender contract",
+    "malformed legacy union normalize/idempotency",
+    "targeted bug reproduction and fix",
+    "full backend e2e regression",
+    "unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand server/test/members/members-tree.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/members/members-tree.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "PASSED" },
+    { "id": "BE-UNIT-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-PUBLIC-001", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PUBLIC-002", "status": "PASSED" },
+    { "id": "BE-PUBLIC-003", "status": "PASSED" },
+    { "id": "BE-PUBLIC-004", "status": "PASSED" },
+    { "id": "BE-PUBLIC-005", "status": "PASSED" },
+    { "id": "BE-PUBLIC-006", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PUBLIC-007", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-001", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-TREE-002", "status": "PASSED" },
+    { "id": "BE-TREE-003", "status": "PASSED" },
+    { "id": "BE-TREE-004", "status": "PASSED" },
+    { "id": "BE-TREE-005", "status": "PASSED" },
+    { "id": "BE-TREE-006", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-007", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-008", "status": "PASSED" },
+    { "id": "BE-TREE-009", "status": "PASSED" },
+    { "id": "BE-TREE-010", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-011", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-012", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-013", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-014", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-015", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-016", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-017", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-FAMILY-001", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-AUTH-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-AUTH-002", "status": "PASSED" },
+    { "id": "BE-AUTH-003", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-002", "status": "PASSED" },
+    { "id": "BE-SUBS-003", "status": "PASSED" },
+    { "id": "BE-SUBS-004", "status": "PASSED" },
+    { "id": "BE-PLAN-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-001", "status": "PASSED" },
+    { "id": "BE-PAY-002", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-003", "status": "PASSED" },
+    { "id": "BE-PAY-004", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-005", "status": "PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-TREE-015",
+      "title": "setChildren mapped parent gender=other into the father role instead of rejecting the ambiguous write",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-TREE-016/017",
+      "title": "normalizeForMember created overlapping pair unions from malformed legacy unions with extra or duplicate partner ids",
+      "status": "FAILED -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "Union write/update contract still lacks execution proof for exact binary-partner enforcement and may still accept malformed shapes such as 1 partner, 3+ partners, or duplicate partner ids",
+    "reparent and other union-consuming flows still lack execution proof when unionId points to malformed multi-partner legacy data",
+    "VNPay return/verify contracts not yet executed",
+    "register rollback on partial side-effect failure not yet executed",
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "true payment concurrency/race behavior not yet executed",
+    "billing-history list visibility policy for /api/subscriptions/payments remains unresolved",
+    "public contract still has no dedicated unions payload; completeness currently relies on spouse inference in members"
+  ]
+}

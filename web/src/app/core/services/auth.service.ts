@@ -3,15 +3,31 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { UserRole } from '../../features/users/models/user.model';
+import { firstValueFrom } from 'rxjs';
 
 export interface User {
   id: string;
   username: string;
   email: string;
   role: UserRole;
+  isEmailVerified?: boolean;
   managedFamilies?: string[];
   assignedFamily?: string;
-  familyId?: string; // Deprecated, use assignedFamily instead
+}
+
+interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: UserRole;
+    isEmailVerified?: boolean;
+    managedFamilies?: string[];
+    assignedFamily?: string;
+  };
+  message?: string;
 }
 
 @Injectable({
@@ -20,12 +36,14 @@ export interface User {
 export class AuthService {
   private currentUser = signal<User | null>(null);
   private isAuthenticated = signal<boolean>(false);
+  private refreshTimer: any = null;
+  private refreshPromise: Promise<boolean> | null = null;
 
   private http = inject(HttpClient);
-  
+
   constructor(private router: Router) {
-    // Kiểm tra localStorage khi khởi động
     this.loadUserFromStorage();
+    this.scheduleRefresh();
   }
 
   get user() {
@@ -36,113 +54,167 @@ export class AuthService {
     return this.isAuthenticated.asReadonly();
   }
 
+  getToken(): string | null {
+    return localStorage.getItem('accessToken');
+  }
+
   private loadUserFromStorage() {
+    const token = localStorage.getItem('accessToken');
     const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
+    if (token && storedUser) {
       try {
         const user = JSON.parse(storedUser);
-        console.log('[AuthService] Loaded user from storage:', user);
-        
-        // Kiểm tra xem user có role không, nếu không thì xóa và bắt login lại
         if (!user.role) {
-          console.warn('[AuthService] User missing role field, clearing storage');
-          localStorage.removeItem('currentUser');
+          this.clearStorage();
           return;
         }
-        
         this.currentUser.set(user);
         this.isAuthenticated.set(true);
-      } catch (e) {
-        console.error('Failed to parse stored user', e);
-        this.logout();
+      } catch {
+        this.clearStorage();
       }
     }
   }
 
-  login(username: string, password: string): Promise<boolean> {
-    // TODO: Implement actual password verification
-    // For now, just fetch user by email and set as logged in
-    return new Promise((resolve) => {
-      this.http.get<any[]>(`${environment.apiBaseUrl}/users`).subscribe({
-        next: (users) => {
-          // Tìm user theo email hoặc username
-          const foundUser = users.find(u => 
-            u.email === username || 
-            u.fullName?.toLowerCase() === username.toLowerCase()
-          );
+  private setAuthData(response: AuthResponse) {
+    const user: User = {
+      id: response.user.id,
+      username: response.user.fullName || response.user.email,
+      email: response.user.email,
+      role: response.user.role,
+      isEmailVerified: response.user.isEmailVerified,
+      managedFamilies: response.user.managedFamilies,
+      assignedFamily: response.user.assignedFamily,
+    };
 
-          if (foundUser) {
-            const user: User = {
-              id: foundUser.id,
-              username: foundUser.fullName || foundUser.email,
-              email: foundUser.email,
-              role: foundUser.role || 'GIAM_DOC',
-              managedFamilies: foundUser.managedFamilies,
-              assignedFamily: foundUser.assignedFamily,
-              familyId: foundUser.assignedFamily
-            };
+    localStorage.setItem('accessToken', response.accessToken);
+    localStorage.setItem('refreshToken', response.refreshToken);
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    this.currentUser.set(user);
+    this.isAuthenticated.set(true);
+    this.scheduleRefresh();
+  }
 
-            console.log('[AuthService] Login successful:', user);
-            
-            this.currentUser.set(user);
-            this.isAuthenticated.set(true);
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            
-            resolve(true);
-          } else {
-            // Fallback to mock login if user not found
-            let role: UserRole = 'GIAM_DOC';
-            let managedFamilies: string[] = [];
-            let assignedFamily: string | undefined = undefined;
+  async login(email: string, password: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<AuthResponse>(`${environment.apiBaseUrl}/auth/login`, { email, password })
+      );
+      this.setAuthData(response);
+      return { success: true, message: 'Đăng nhập thành công' };
+    } catch (err: any) {
+      const msg = err?.error?.message || 'Email hoặc mật khẩu không đúng';
+      return { success: false, message: msg };
+    }
+  }
 
-            // Mock: username chứa role name
-            if (username.toLowerCase().includes('quanly') || username.toLowerCase().includes('manager')) {
-              role = 'QUAN_LY';
-              managedFamilies = ['family-1', 'family-2'];
-            } else if (username.toLowerCase().includes('nhanvien') || username.toLowerCase().includes('staff')) {
-              role = 'NHAN_VIEN';
-              assignedFamily = 'family-1';
-            } else if (username.toLowerCase().includes('truongho') || username.toLowerCase().includes('head')) {
-              role = 'TRUONG_HO';
-              assignedFamily = 'family-1';
-            }
+  async register(data: {
+    fullName: string; email: string; password: string;
+    familyName: string; phone?: string; address?: string;
+  }): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<AuthResponse>(`${environment.apiBaseUrl}/auth/register`, data)
+      );
+      this.setAuthData(response);
+      return { success: true, message: response.message || 'Đăng ký thành công!' };
+    } catch (err: any) {
+      const msg = err?.error?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
+      return { success: false, message: msg };
+    }
+  }
 
-            const mockUser: User = {
-              id: '1',
-              username: username,
-              email: `${username}@example.com`,
-              role: role,
-              managedFamilies: managedFamilies.length > 0 ? managedFamilies : undefined,
-              assignedFamily: assignedFamily,
-              familyId: assignedFamily || 'family-1'
-            };
+  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ message: string }>(`${environment.apiBaseUrl}/auth/forgot-password`, { email })
+      );
+      return { success: true, message: res.message };
+    } catch (err: any) {
+      return { success: false, message: err?.error?.message || 'Có lỗi xảy ra' };
+    }
+  }
 
-            console.log('[AuthService] Login with mock user (not found in DB):', mockUser);
-            
-            this.currentUser.set(mockUser);
-            this.isAuthenticated.set(true);
-            localStorage.setItem('currentUser', JSON.stringify(mockUser));
-            
-            resolve(true);
-          }
-        },
-        error: (err) => {
-          console.error('[AuthService] Failed to fetch users:', err);
-          resolve(false);
-        }
-      });
-    });
+  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ message: string }>(`${environment.apiBaseUrl}/auth/reset-password`, { token, newPassword })
+      );
+      return { success: true, message: res.message };
+    } catch (err: any) {
+      return { success: false, message: err?.error?.message || 'Có lỗi xảy ra' };
+    }
+  }
+
+  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ message: string }>(`${environment.apiBaseUrl}/auth/verify-email`, { token })
+      );
+      return { success: true, message: res.message };
+    } catch (err: any) {
+      return { success: false, message: err?.error?.message || 'Xác thực thất bại' };
+    }
+  }
+
+  async refreshTokens(): Promise<boolean> {
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) return false;
+
+    this.refreshPromise = (async () => {
+      try {
+        const res = await firstValueFrom(
+          this.http.post<{ accessToken: string; refreshToken: string }>(
+            `${environment.apiBaseUrl}/auth/refresh`, { refreshToken }
+          )
+        );
+        localStorage.setItem('accessToken', res.accessToken);
+        localStorage.setItem('refreshToken', res.refreshToken);
+        this.scheduleRefresh();
+        return true;
+      } catch {
+        this.logout();
+        return false;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
+  private scheduleRefresh() {
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
+    const token = this.getToken();
+    if (!token) return;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiresMs = payload.exp * 1000 - Date.now();
+      // Refresh 2 minutes before expiry
+      const refreshIn = Math.max(expiresMs - 2 * 60 * 1000, 10000);
+      this.refreshTimer = setTimeout(() => this.refreshTokens(), refreshIn);
+    } catch { /* ignore */ }
+  }
+
+  private clearStorage() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('currentUser');
   }
 
   logout() {
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
-    localStorage.removeItem('currentUser');
-    console.log('[AuthService] User logged out, localStorage cleared');
+    this.clearStorage();
     this.router.navigate(['/']);
   }
 
-  // Phương thức để component có thể subscribe
   isLoggedIn(): boolean {
     return this.isAuthenticated();
   }

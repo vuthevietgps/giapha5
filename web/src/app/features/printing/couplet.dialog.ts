@@ -1,16 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 export interface CoupletData {
   leftText: string;
   rightText: string;
-  fontSize: number; // rem unit in preview
+  fontSize: number;
   fontFamily: string;
   color: string;
 }
@@ -37,6 +38,7 @@ export interface CoupletDialogResult {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatSnackBarModule,
   ],
   template: `
   <h2 mat-dialog-title>Đổi câu đối</h2>
@@ -67,7 +69,7 @@ export interface CoupletDialogResult {
         <div class="upload">
           <button mat-stroked-button color="primary" (click)="fontInput.click()">Tải font (ttf/otf)</button>
           <input type="file" #fontInput accept=".ttf,.otf" hidden (change)="onFontFile($event)">
-          <div class="hint">Chọn file .ttf/.otf từ thư mục font đã giải nén (server/font) để áp dụng thực tế cho font đã chọn.</div>
+          <div class="hint">Chọn file .ttf/.otf từ thư mục font đã giải nén để áp dụng thật cho mẫu in.</div>
         </div>
 
         <label class="label">Màu chữ</label>
@@ -93,6 +95,8 @@ export interface CoupletDialogResult {
   `]
 })
 export class CoupletDialog {
+  private readonly snack = inject(MatSnackBar);
+
   model: CoupletData;
   fonts: FontItem[] = [];
   customFonts: FontItem[] = [];
@@ -123,9 +127,10 @@ export class CoupletDialog {
       this.fonts = [item, ...this.fonts.filter(f => !(f.source === 'custom' && f.name === name))];
       this.model.fontFamily = name;
       this.registerFontFace(name, dataUrl);
+      this.snack.open('Đã nạp font mới', 'Đóng', { duration: 1800 });
     } catch (err) {
       console.error(err);
-      alert('Không đọc được font. Hãy giải nén file .ttf/.otf và chọn lại.');
+      this.snack.open('Không đọc được font. Hãy giải nén file .ttf/.otf rồi thử lại.', 'Đóng', { duration: 2600 });
     }
   }
 

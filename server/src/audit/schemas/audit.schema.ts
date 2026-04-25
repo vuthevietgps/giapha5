@@ -14,6 +14,9 @@ export class AuditLog {
   @Prop({ required: true, trim: true })
   action!: 'create' | 'update' | 'delete' | 'reparent';
 
+  @Prop({ trim: true })
+  family?: string;
+
   @Prop({ type: Object })
   before?: any;
 

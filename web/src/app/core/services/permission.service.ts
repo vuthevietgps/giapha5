@@ -24,21 +24,16 @@ export class PermissionService {
     const user = this.authService.user();
     const role = user?.role;
     
-    console.log('[PermissionService] Checking permission:', { user, role, resource, action });
-    
     if (!role) {
-      console.log('[PermissionService] No role found, returning false');
       return false;
     }
     
     const permissions = ROLE_PERMISSIONS[role as UserRole];
     if (!permissions) {
-      console.log('[PermissionService] No permissions for role:', role);
       return false;
     }
     
     const hasPermission = permissions[resource]?.[action] || false;
-    console.log('[PermissionService] Result:', hasPermission);
     
     return hasPermission;
   }

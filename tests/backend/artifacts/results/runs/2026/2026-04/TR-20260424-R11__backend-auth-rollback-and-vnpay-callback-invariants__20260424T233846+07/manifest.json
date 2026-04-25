@@ -1,0 +1,58 @@
+{
+  "testRunId": "TR-20260424-R11",
+  "resultId": "RS-20260424-BE-R11",
+  "startedAt": "2026-04-24T23:32:58+07:00",
+  "finishedAt": "2026-04-24T23:38:46+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "auth register rollback fault injection",
+    "vnpay stored-order callback invariants",
+    "targeted bug reproduction and fix",
+    "full backend e2e regression",
+    "unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand server/test/auth/auth-rollback.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/payments/payments-callback-invariants.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/auth/auth-rollback.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/payments/payments-callback-invariants.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-UNIT-001", "status": "PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-AUTH-002", "status": "PASSED" },
+    { "id": "BE-AUTH-004", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-018", "status": "FAILED -> FIXED -> PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-AUTH-004",
+      "title": "register left persisted family and user rows behind when free-subscription creation failed mid-flight",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-PAY-018",
+      "title": "signed VNPay success callbacks could confirm payments despite mismatched stored amount, mismatched method, or non-pending payment or subscription state",
+      "status": "FAILED -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "billing/report policy beyond the current owner-only /api/subscriptions/payments contract remains open for creator-drift behavior and low-privilege family readers",
+    "duplicate valid pair unions are still not prevented by a uniqueness guarantee at the DB layer",
+    "public contract still has no dedicated unions payload; completeness currently relies on spouse inference in members"
+  ]
+}

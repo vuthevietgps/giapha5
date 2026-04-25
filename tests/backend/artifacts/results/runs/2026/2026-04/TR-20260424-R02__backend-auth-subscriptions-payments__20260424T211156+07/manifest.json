@@ -1,0 +1,79 @@
+{
+  "testRunId": "TR-20260424-R02",
+  "resultId": "RS-20260424-BE-R02",
+  "startedAt": "2026-04-24T21:06:40+07:00",
+  "finishedAt": "2026-04-24T21:11:56+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "backend auth contract e2e",
+    "backend subscriptions and payments contract e2e",
+    "backend member plan-limit negative path",
+    "full backend e2e regression",
+    "full backend unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand",
+    "npm run build",
+    "npm run test:e2e -- --runInBand",
+    "npm run test:e2e -- --runInBand test/auth/auth.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "PASSED" },
+    { "id": "BE-UNIT-001", "status": "PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-AUTH-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-AUTH-002", "status": "PASSED" },
+    { "id": "BE-AUTH-003", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-002", "status": "PASSED" },
+    { "id": "BE-PLAN-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-001", "status": "PASSED" },
+    { "id": "BE-PAY-002", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-003", "status": "PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-AUTH-001",
+      "title": "GET /api/auth/me returned 200/null without authentication",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-SUBS-001",
+      "title": "GET /api/subscriptions/plans was marked public in middleware but blocked by controller-level permission guard",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-PLAN-001",
+      "title": "PlanLimitInterceptor threw BSON/ObjectId errors before normal member DTO validation",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-AUTH-003",
+      "title": "Refresh-token rotation remained reusable because refresh tokens were stored with bcrypt, which truncates long JWT input",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-PAY-002",
+      "title": "Repeat payment confirmation could mutate transaction metadata and subscription activation window",
+      "status": "GAP FOUND -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "duplicate POST /api/payments/create idempotency not yet executed",
+    "subscription family-scoped auth paths not yet executed",
+    "VNPay return/verify contracts not yet executed",
+    "register rollback on partial side-effect failure not yet executed",
+    "mail delivery itself not asserted; current e2e only proves flow survives SMTP failure"
+  ]
+}

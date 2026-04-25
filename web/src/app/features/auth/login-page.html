@@ -1,4 +1,23 @@
 <div class="login-container">
+  <section class="login-brand-panel" aria-hidden="true">
+    <div class="brand-mark">
+      <mat-icon>account_tree</mat-icon>
+    </div>
+    <p class="brand-eyebrow">Gia Phả Số</p>
+    <h2>Lưu giữ cội nguồn trong một không gian quản trị rõ ràng.</h2>
+    <div class="brand-preview">
+      <div class="preview-node main">Cụ tổ</div>
+      <div class="preview-line"></div>
+      <div class="preview-row">
+        <div class="preview-node">Đời 2</div>
+        <div class="preview-node accent">Đời 2</div>
+      </div>
+      <div class="preview-meta">
+        <span><mat-icon>shield</mat-icon> An toàn</span>
+        <span><mat-icon>groups</mat-icon> Nhiều thế hệ</span>
+      </div>
+    </div>
+  </section>
   <div class="login-card-wrapper">
     <mat-card class="login-card">
       <div class="login-header">
@@ -9,13 +28,14 @@
 
       <form (ngSubmit)="login()" class="login-form">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Tên đăng nhập</mat-label>
-          <input matInput 
-                 [(ngModel)]="username" 
-                 name="username" 
+          <mat-label>Email</mat-label>
+          <input matInput
+                 [(ngModel)]="email"
+                 name="email"
+                 type="email"
                  required
-                 autocomplete="username">
-          <mat-icon matPrefix>person</mat-icon>
+                 autocomplete="email">
+          <mat-icon matPrefix>email</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -35,18 +55,35 @@
           </button>
         </mat-form-field>
 
-        <div class="error-message" *ngIf="errorMessage">
-          <mat-icon>error</mat-icon>
-          <span>{{errorMessage}}</span>
+        @if (errorMessage) {
+          <div class="error-message">
+            <mat-icon>error</mat-icon>
+            <span>{{errorMessage}}</span>
+          </div>
+        }
+
+        <div class="login-links">
+          <a routerLink="/forgot-password" class="forgot-link">Quên mật khẩu?</a>
         </div>
 
         <button mat-raised-button 
                 color="primary" 
                 type="submit" 
-                class="login-button">
-          <mat-icon>login</mat-icon>
-          Đăng nhập
+                class="login-button"
+                [disabled]="loading">
+          @if (loading) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <ng-container>
+              <mat-icon>login</mat-icon>
+              <span>Đăng nhập</span>
+            </ng-container>
+          }
         </button>
+
+        <div class="register-link">
+          Chưa có tài khoản? <a routerLink="/register">Đăng ký miễn phí</a>
+        </div>
 
         <div class="login-footer">
           <a href="/" class="back-link">

@@ -7,6 +7,7 @@
       [includeSpousesInFocus]="includeSpousesInFocus"
       [connectionStyle]="connectionStyle"
       [topOffset]="topOffset"
+      [allMembers]="allMembers"
       (goHome)="goHome()"
       (familyChange)="selectedFamilyId = $event; onFamilyChange()"
       (createRoot)="createRoot()"
@@ -22,6 +23,7 @@
       [decorAssets]="decorAssets()"
       (export)="exportToPNG($event)"
       (reload)="reload()"
+      (searchMember)="scrollToMember($event)"
     />
     <div #treeAreaRef class="tree-area" [class.space-pan]="spaceKey || panAlwaysEnabled" [class.panning]="isPanning" (contextmenu)="$event.preventDefault()" (wheel)="onWheel($event)" (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()"
       [style.paddingBottom.px]="topOffset"
@@ -30,6 +32,63 @@
         [style.backgroundImage]="backgroundUrl ? 'url(' + backgroundUrl + ')' : 'none'"
         [style.backgroundSize]="backgroundFit"
       ></div>
+      <div class="tree-hud">
+        <div class="tree-hud-left">
+          <div class="hud-card stats">
+            <div class="hud-stat">
+              <strong>{{ stats.totalMembers }}</strong>
+              <span>Thành viên</span>
+            </div>
+            <div class="hud-stat">
+              <strong>{{ stats.totalGenerations }}</strong>
+              <span>Thế hệ</span>
+            </div>
+            <div class="hud-stat">
+              <strong>{{ stats.totalAlive }}</strong>
+              <span>Còn sống</span>
+            </div>
+          </div>
+          <div class="hud-chip" *ngIf="focusRootId">
+            <mat-icon>center_focus_strong</mat-icon>
+            Đang xem một nhánh riêng
+          </div>
+        </div>
+
+        <div class="tree-hud-right">
+          <div class="hud-card controls">
+            <div class="hud-actions">
+              <button mat-icon-button type="button" aria-label="Thu nhỏ cây" (click)="zoomOut()">
+                <mat-icon>remove</mat-icon>
+              </button>
+              <div class="hud-readout">{{ zoomPercent() }}%</div>
+              <button mat-icon-button type="button" aria-label="Phóng to cây" (click)="zoomIn()">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+            <div class="hud-actions">
+              <button mat-icon-button type="button" aria-label="Giảm kích thước node" (click)="adjustNodeScale(-0.08)">
+                <mat-icon>view_compact</mat-icon>
+              </button>
+              <div class="hud-readout">{{ nodeScalePercent() }}%</div>
+              <button mat-icon-button type="button" aria-label="Tăng kích thước node" (click)="adjustNodeScale(0.08)">
+                <mat-icon>view_agenda</mat-icon>
+              </button>
+            </div>
+            <button mat-stroked-button type="button" (click)="centerRoot()">
+              <mat-icon>gps_fixed</mat-icon>
+              Về gốc
+            </button>
+            <button mat-stroked-button type="button" (click)="fitTreeForReading()">
+              <mat-icon>fit_screen</mat-icon>
+              Dễ đọc
+            </button>
+            <button mat-stroked-button type="button" (click)="resetViewport()">
+              <mat-icon>restart_alt</mat-icon>
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="center-wrap">
           <div
             class="canvas draggable"
@@ -112,55 +171,157 @@
               <span class="couplet-word" *ngFor="let w of splitWords(couplet().rightText)">{{ w }}</span>
             </div>
           <svg class="connections" *ngIf="connections.length" [attr.width]="overlayW" [attr.height]="overlayH">
-            <line *ngFor="let c of connections" [attr.x1]="c.x1" [attr.y1]="c.y1" [attr.x2]="c.x2" [attr.y2]="c.y2" [attr.stroke]="c.color" stroke-width="2" />
+            <line *ngFor="let c of connections" [attr.x1]="c.x1" [attr.y1]="c.y1" [attr.x2]="c.x2" [attr.y2]="c.y2" [attr.stroke]="c.color" stroke-width="2.5" stroke-linecap="round" />
           </svg>
-          <ng-container *ngIf="root; else empty">
+
+          <!-- Loading state -->
+          <div class="loading-overlay" *ngIf="isLoading && !root">
+            <div class="loading-spinner"></div>
+            <div style="color:#757575;font-size:14px">Đang tải cây gia phả...</div>
+          </div>
+
+          <!-- Error state -->
+          <div class="error-banner" *ngIf="errorMessage">
+            <mat-icon>warning</mat-icon>
+            <span>{{ errorMessage }}</span>
+            <button mat-button color="primary" (click)="retryLoad()">Thử lại</button>
+          </div>
+
+          <ng-container *ngIf="root && !isLoading; else empty">
             <div class="tree-content">
-              <div class="couple-box">
-              <div #husbandEl class="person male" (contextmenu)="openContextMenu($event, root)">
-                <div class="name"><span *ngIf="root.isMartyred" style="color: #FFD700; margin-right: 4px;">⭐</span>{{root.fullName}}</div>
-                <div class="meta">{{root.dob | date:'yyyy-MM-dd'}}</div>
-              </div>
-              <div class="wives-list">
-                <div class="person female" *ngFor="let s of spouses; let i = index" #wifeEl [attr.data-id]="s.id" (contextmenu)="openContextMenu($event, s)">
-                  <div class="name"><span *ngIf="s.isMartyred" style="color: #FFD700; margin-right: 4px;">⭐</span>{{s.fullName}} <span class="role-tag">(​v​ợ​)</span></div>
-                  <div class="meta">{{s.dob | date:'yyyy-MM-dd'}}</div>
-                  <div class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Thêm con" (click)="quickAddChild(s)"></div>
-                </div>
-              </div>
-              </div>
-              <div class="children" *ngFor="let level of levels; let li = index">
-              <div class="child-couple couple-box" *ngFor="let c of level" #childBox [style.borderColor]="childColors[c.id!] || '#3f51b5'">
-                <div class="person child-person" [class.male]="c.gender==='male'" [class.female]="c.gender==='female'" #childEl [attr.data-id]="c.id" [attr.data-mother]="c.mother" [attr.data-father]="c.father" (contextmenu)="openContextMenu($event, c)">
-                  <div class="name"><span *ngIf="c.isMartyred" style="color: #FFD700; margin-right: 4px;">⭐</span>{{c.fullName}}</div>
-                  <div class="meta">{{c.dob | date:'yyyy-MM-dd'}}</div>
-                </div>
-                <div class="wives-list" *ngIf="spousesByMember[c.id!] && spousesByMember[c.id!].length">
-                  <div class="person spouse-small" *ngFor="let s of spousesByMember[c.id!]" #wifeEl [attr.data-id]="s.id" (contextmenu)="openContextMenu($event, s)" (click)="onSpousePersonClick(c, s, $event)" [class.male]="s.gender==='male'" [class.female]="s.gender==='female'">
-                    <div class="name"><span *ngIf="s.isMartyred" style="color: #FFD700; margin-right: 4px;">⭐</span>{{s.fullName}} <span class="role-tag">{{s.gender==='female'?'(​v​ợ​)':'(chồng)'}} </span></div>
-                    <div class="meta">{{s.dob | date:'yyyy-MM-dd'}}</div>
-                    <div class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Thêm con" (click)="onAnchorClick(c, s); $event.stopPropagation()"></div>
+              <!-- Root couple (Generation 1) -->
+              <div class="gen-label">Đời 1 · Cụ tổ</div>
+              <div class="couple-box" [attr.data-anchor-id]="root.id" style="border-color: #1976d2; position:relative;">
+              <div #husbandEl class="person male" [attr.data-member-id]="root.id" [class.deceased]="root.dod" (contextmenu)="openContextMenu($event, root)">
+                <div class="person-info">
+                  <img *ngIf="getPhotoUrl(root)" [src]="getPhotoUrl(root)" class="person-photo" [alt]="displayName(root)"/>
+                  <div class="person-text">
+                    <div class="name"><span *ngIf="root.isMartyred" style="color: #FFD700; margin-right: 4px;">⭐</span>{{displayName(root)}}</div>
+                    <div class="meta" *ngIf="lifespanText(root)">{{ lifespanText(root) }}</div>
+                    <div class="person-badges" *ngIf="partnerCount(root) || childCount(root)">
+                      <span class="person-badge" *ngIf="partnerCount(root)">
+                        <mat-icon>favorite</mat-icon>{{ partnerCount(root) }} hôn phối
+                      </span>
+                      <span class="person-badge" *ngIf="childCount(root)">
+                        <mat-icon>child_care</mat-icon>{{ childCount(root) }} con
+                      </span>
+                    </div>
                   </div>
                 </div>
+                <button type="button" class="person-action" aria-label="Thao tác" (click)="openActions($event, root)">
+                  <mat-icon>more_horiz</mat-icon>
+                </button>
+              </div>
+              <div class="wives-list">
+                <div class="person female" *ngFor="let s of spouses; let i = index" #wifeEl [attr.data-id]="s.id" [attr.data-member-id]="s.id" [class.deceased]="s.dod" (contextmenu)="openContextMenu($event, s)">
+                  <div class="person-info">
+                    <img *ngIf="getPhotoUrl(s)" [src]="getPhotoUrl(s)" class="person-photo" [alt]="displayName(s)"/>
+                    <div class="person-text">
+                      <div class="name"><span *ngIf="s.isMartyred" style="color: #FFD700; margin-right: 4px;">⭐</span>{{displayName(s)}} <span class="role-tag">(vợ)</span></div>
+                      <div class="meta" *ngIf="lifespanText(s)">{{ lifespanText(s) }}</div>
+                      <div class="person-badges" *ngIf="partnerCount(s) || childCount(s)">
+                        <span class="person-badge" *ngIf="partnerCount(s)">
+                          <mat-icon>favorite</mat-icon>{{ partnerCount(s) }}
+                        </span>
+                        <span class="person-badge" *ngIf="childCount(s)">
+                          <mat-icon>child_care</mat-icon>{{ childCount(s) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button type="button" class="person-action" aria-label="Thao tác" (click)="openActions($event, s)">
+                    <mat-icon>more_horiz</mat-icon>
+                  </button>
+                  <button type="button" class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Nhấn để thêm con" (click)="quickAddChild(s); $event.stopPropagation()">
+                    <span class="anchor-label">Con</span>
+                  </button>
+                </div>
               </div>
               </div>
+
+              <!-- Children levels -->
+              <ng-container *ngFor="let level of levels; let li = index">
+                <div class="gen-label">{{ generationLabel(li) }} · {{ level.length }} người</div>
+                <div class="children">
+                  <div class="child-couple couple-box" *ngFor="let c of level" #childBox #childEl [attr.data-id]="c.id" [attr.data-mother]="c.mother" [attr.data-father]="c.father" [style.borderColor]="childColors[c.id!] || '#3f51b5'" style="position:relative;">
+                    <!-- Hidden anchor on child couple-box for connection fallback -->
+                    <div class="parent-anchor" #anchorEl [attr.data-id]="c.id" style="position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:2px;height:2px;pointer-events:none;opacity:0"></div>
+                    <div class="person child-person" [attr.data-member-id]="c.id" [class.male]="c.gender==='male'" [class.female]="c.gender==='female'" [class.deceased]="c.dod" (contextmenu)="openContextMenu($event, c)">
+                      <div class="person-info">
+                        <img *ngIf="getPhotoUrl(c)" [src]="getPhotoUrl(c)" class="person-photo" [alt]="displayName(c)"/>
+                        <div class="person-text">
+                          <div class="name"><span *ngIf="c.isMartyred" style="color: #FFD700; margin-right: 4px;">⭐</span>{{displayName(c)}}</div>
+                          <div class="meta" *ngIf="lifespanText(c)">{{ lifespanText(c) }}</div>
+                          <div class="person-badges" *ngIf="partnerCount(c) || childCount(c)">
+                            <span class="person-badge" *ngIf="partnerCount(c)">
+                              <mat-icon>favorite</mat-icon>{{ partnerCount(c) }} hôn phối
+                            </span>
+                            <span class="person-badge" *ngIf="childCount(c)">
+                              <mat-icon>child_care</mat-icon>{{ childCount(c) }} con
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button type="button" class="person-action" aria-label="Thao tác" (click)="openActions($event, c)">
+                        <mat-icon>more_horiz</mat-icon>
+                      </button>
+                    </div>
+                    <div class="wives-list" *ngIf="spousesByMember[c.id!] && spousesByMember[c.id!].length">
+                      <div class="person spouse-small" *ngFor="let s of spousesByMember[c.id!]" #wifeEl [attr.data-id]="s.id" [attr.data-member-id]="s.id" (contextmenu)="openContextMenu($event, s)" (click)="onSpousePersonClick(c, s, $event)" [class.male]="s.gender==='male'" [class.female]="s.gender==='female'" [class.deceased]="s.dod">
+                        <div class="person-info">
+                          <img *ngIf="getPhotoUrl(s)" [src]="getPhotoUrl(s)" class="person-photo" [alt]="displayName(s)" style="width:28px;height:28px"/>
+                          <div class="person-text">
+                            <div class="name"><span *ngIf="s.isMartyred" style="color: #FFD700; margin-right: 4px;">⭐</span>{{displayName(s)}} <span class="role-tag">{{s.gender==='female'?'(vợ)':'(chồng)'}}</span></div>
+                            <div class="meta" *ngIf="lifespanText(s)">{{ lifespanText(s) }}</div>
+                            <div class="person-badges" *ngIf="partnerCount(s) || childCount(s)">
+                              <span class="person-badge" *ngIf="partnerCount(s)">
+                                <mat-icon>favorite</mat-icon>{{ partnerCount(s) }}
+                              </span>
+                              <span class="person-badge" *ngIf="childCount(s)">
+                                <mat-icon>child_care</mat-icon>{{ childCount(s) }}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <button type="button" class="person-action" aria-label="Thao tác" (click)="openActions($event, s)">
+                          <mat-icon>more_horiz</mat-icon>
+                        </button>
+                        <button type="button" class="anchor" #anchorEl [attr.data-id]="s.id" [style.background]="colorFor(s.id!)" title="Nhấn để thêm con" (click)="onAnchorClick(c, s); $event.stopPropagation()">
+                          <span class="anchor-label">Con</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
             </div>
           </ng-container>
           </div>
         </div>
       <ng-template #empty>
-        <div class="empty">Chưa có đời đầu. Bấm "Tạo đời đầu" để bắt đầu.</div>
+        <div class="empty-state" *ngIf="!isLoading">
+          <mat-icon style="font-size:64px;width:64px;height:64px;color:#bdbdbd">account_tree</mat-icon>
+          <h3 style="margin:16px 0 8px;color:#424242">Chưa có cây gia phả</h3>
+          <p style="color:#757575;margin:0 0 16px">Bắt đầu bằng cách tạo thành viên đời đầu (Cụ tổ) cho gia đình.</p>
+          <button mat-raised-button color="primary" (click)="createRoot()">
+            <mat-icon>person_add</mat-icon> Tạo đời đầu
+          </button>
+        </div>
       </ng-template>
     </div>
   </div>
   
 </div>
 
-<!-- Context menu primitive -->
-<div class="ctx-menu" *ngIf="ctx.visible" [style.left.px]="ctx.x" [style.top.px]="ctx.y" (click)="ctx.visible = false">
-  <button mat-button (click)="editInfo(ctx.node)">Sửa thông tin</button>
-  <button mat-button (click)="addWife(ctx.node)">Thêm hôn phối</button>
-  <button mat-button (click)="addChild(ctx.node)" *ngIf="ctx.node?.gender==='female'">Thêm con</button>
-  <button mat-button (click)="enterFocus(ctx.node!)">Xem nhánh này</button>
-  <button mat-button color="warn" (click)="deleteNode(ctx.node)">Xóa</button>
+<!-- Context menu -->
+<div class="ctx-menu" *ngIf="ctx.visible" [class.mobile]="ctx.mobile" [style.left.px]="ctx.x" [style.top.px]="ctx.y" (click)="$event.stopPropagation()">
+  <div class="ctx-menu-header" *ngIf="ctx.node">
+    <div class="ctx-menu-title">{{ displayName(ctx.node) }}</div>
+    <div class="ctx-menu-subtitle">{{ ctx.node.gender === 'female' ? 'Nhanh mẹ / hôn phối / nhánh' : 'Nhanh hồ sơ / hôn phối / nhánh' }}</div>
+  </div>
+  <button mat-button (click)="editInfo(ctx.node)"><mat-icon>edit</mat-icon> Sửa thông tin</button>
+  <button mat-button (click)="addWife(ctx.node)"><mat-icon>favorite</mat-icon> Thêm hôn phối</button>
+  <button mat-button (click)="addChild(ctx.node)" *ngIf="ctx.node?.gender==='female'"><mat-icon>child_care</mat-icon> Thêm con</button>
+  <button mat-button (click)="enterFocus(ctx.node!)"><mat-icon>zoom_in</mat-icon> Xem nhánh này</button>
+  <button mat-button color="warn" (click)="deleteNode(ctx.node)"><mat-icon>delete</mat-icon> Xóa</button>
 </div>

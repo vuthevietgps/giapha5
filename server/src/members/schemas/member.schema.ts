@@ -55,6 +55,11 @@ export class Member {
 
 export const MemberSchema = SchemaFactory.createForClass(Member);
 
+// Compound indexes for common query patterns
+MemberSchema.index({ family: 1, father: 1 });
+MemberSchema.index({ family: 1, gender: 1 });
+MemberSchema.index({ family: 1, fullName: 1 });
+
 MemberSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,

@@ -1,0 +1,91 @@
+{
+  "testRunId": "TR-20260424-R05",
+  "resultId": "RS-20260424-BE-R05",
+  "startedAt": "2026-04-24T21:49:30+07:00",
+  "finishedAt": "2026-04-24T21:56:02+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "backend family public-share edge cases",
+    "backend members/unions edge cases",
+    "targeted bug reproduction for public payload leak, spouse-only-in-union completeness, and malformed ObjectId contracts",
+    "full backend e2e regression",
+    "unit regression rerun after spec drift fix",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand server/test/families/families-public-share.contract.e2e-spec.ts server/test/members/members-tree.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/families/families-public-share.contract.e2e-spec.ts server/test/members/members-tree.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "PASSED" },
+    { "id": "BE-UNIT-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-PUBLIC-002", "status": "PASSED" },
+    { "id": "BE-PUBLIC-003", "status": "PASSED" },
+    { "id": "BE-PUBLIC-004", "status": "PASSED" },
+    { "id": "BE-PUBLIC-005", "status": "PASSED" },
+    { "id": "BE-PUBLIC-006", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PUBLIC-007", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-003", "status": "PASSED" },
+    { "id": "BE-TREE-004", "status": "PASSED" },
+    { "id": "BE-TREE-005", "status": "PASSED" },
+    { "id": "BE-TREE-008", "status": "PASSED" },
+    { "id": "BE-TREE-009", "status": "PASSED" },
+    { "id": "BE-TREE-010", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-011", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-012", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-013", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-014", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-AUTH-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-AUTH-002", "status": "PASSED" },
+    { "id": "BE-AUTH-003", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-002", "status": "PASSED" },
+    { "id": "BE-SUBS-003", "status": "PASSED" },
+    { "id": "BE-SUBS-004", "status": "PASSED" },
+    { "id": "BE-PLAN-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-001", "status": "PASSED" },
+    { "id": "BE-PAY-002", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-003", "status": "PASSED" },
+    { "id": "BE-PAY-004", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-005", "status": "PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-PUBLIC-006",
+      "title": "Public family payload leaked share-management and internal fields",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-PUBLIC-007",
+      "title": "Public members payload lost spouse relationships that existed only through unions",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-TREE-010/011/012/013/014",
+      "title": "Malformed ObjectId inputs across members/unions endpoints returned 500 or contract-drift 404 instead of explicit 400",
+      "status": "FAILED -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "VNPay return/verify contracts not yet executed",
+    "register rollback on partial side-effect failure not yet executed",
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "true payment concurrency/race behavior not yet executed",
+    "billing-history list visibility policy for /api/subscriptions/payments remains unresolved",
+    "setChildren behavior for gender=other parent is not yet executed",
+    "malformed legacy unions with 3+ or duplicate partners are not yet executed",
+    "public contract still has no dedicated unions payload; completeness currently relies on spouse inference in members"
+  ]
+}

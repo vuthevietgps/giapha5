@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, AfterViewInit, ElementRef, ViewChild, ViewChildren, QueryList, HostListener, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, AfterViewInit, ElementRef, ViewChild, ViewChildren, QueryList, HostListener, effect, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -19,6 +19,8 @@ import { TreeAddPartnerDialog } from './tree-add-partner.dialog';
 import { TreeSelectFatherDialog } from './tree-select-father.dialog';
 import { TreeBackgroundsDialog } from './tree-backgrounds.dialog';
 import { TreeDecorDialog, type DecorDialogResult } from './tree-decor.dialog';
+import { TreeNamePromptDialog, type TreeNamePromptData } from './tree-name-prompt.dialog';
+import { ConfirmDialogComponent } from '../../../../core/ui/confirm-dialog';
 import { MemberService } from '../../services/member';
 import { UnionService } from '../../services/union';
 import type { Family } from '../../../families/models/family.model';
@@ -71,42 +73,78 @@ import { TreeFontService, type FontItem } from './services/tree-font.service';
   .header::-webkit-scrollbar-thumb{background:#c7c7c7;border-radius:999px}
   .header::-webkit-scrollbar-track{background:transparent}
     .spacer{flex:1}
-  .tree-area{position:relative;width:100%;height:calc(100vh - 64px);max-width:none;aspect-ratio:auto;overflow:auto;padding:8px;border:1px solid #e0e0e0;border-radius:12px;box-sizing:border-box;background:#fafafa}
+  .tree-area{position:relative;width:100%;flex:1;min-height:0;max-width:none;aspect-ratio:auto;overflow:auto;padding:8px;border:1px solid #e0e0e0;border-radius:12px;box-sizing:border-box;background:#fafafa}
   .tree-area.space-pan{cursor:grab}
   .tree-area.space-pan.panning{cursor:grabbing}
   .center-wrap{min-width:100%;min-height:100%;display:grid;justify-content:center;align-content:flex-start;position:relative;z-index:1}
   .tree-content{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:100%}
-  .connections{position:absolute;left:0;top:0;pointer-events:none;z-index:999}
+  .connections{position:absolute;left:0;top:0;pointer-events:none;z-index:1}
     .node{border:1px solid #ccc;border-radius:8px;padding:8px 12px;background:transparent;min-width:160px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-  .couple-box{display:inline-grid;grid-template-rows:auto auto;row-gap:6px;justify-items:center;border:2px solid #e0e0e0;border-radius:12px;padding:10px 12px 12px;background:transparent;position:relative;z-index:2;width:fit-content;max-width:none;box-shadow:0 2px 4px rgba(0,0,0,.06);overflow:hidden;transition:border-color .15s}
-  /* Nền trong suốt; giữ vạch màu giới tính ở cạnh trái */
-  .person{margin:0 auto 2px;text-align:center;padding:6px 12px 6px 16px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:auto;position:relative;background:transparent}
+  .couple-box{display:inline-grid;grid-template-rows:auto auto;row-gap:6px;justify-items:center;border:2px solid #e0e0e0;border-radius:12px;padding:10px 12px 12px;background:rgba(255,255,255,0.85);position:relative;z-index:2;width:fit-content;max-width:none;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:visible;transition:border-color .2s, box-shadow .2s}
+  .couple-box:hover{box-shadow:0 4px 16px rgba(0,0,0,.12);border-color:#b0bec5}
+  .person{margin:0 auto 2px;text-align:center;padding:8px 18px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:auto;position:relative;background:transparent;cursor:pointer;transition:background .15s}
+  .person:hover{background:rgba(0,0,0,.03)}
   .person::before{content:"";position:absolute;left:4px;top:6px;width:6px;height:calc(100% - 12px);border-radius:6px;background:#1976d2;box-shadow:0 0 0 1px rgba(0,0,0,0.06)}
   .person.male::before{background:#1976d2}
   .person.female::before{background:#d81b60}
+  .person-action{display:none}
+  .person-action:hover{background:rgba(25,118,210,.12);color:#1976d2}
+  .person-action mat-icon{font-size:18px;width:18px;height:18px}
+  .person.deceased{opacity:0.7}
+  .person.deceased .name{text-decoration:line-through;text-decoration-color:rgba(0,0,0,0.3)}
   .person.male .name{color:#000}
   .person.female .name{color:#000}
   .child-couple.couple-box{padding:6px 10px}
+  .person-photo{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #e0e0e0;flex-shrink:0}
+  .person-info{display:flex;align-items:center;gap:8px}
+  .person-text{display:flex;flex-direction:column;gap:2px}
+  .person-badges{display:none}
+  .person-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:rgba(0,0,0,.05);color:#555;font-size:10px;font-weight:600;letter-spacing:.02em}
+  .person-badge mat-icon{font-size:12px;width:12px;height:12px}
   .wives-list{display:flex;gap:6px;flex-wrap:nowrap;justify-content:center;align-items:flex-end}
     .wives-list .person{position:relative;padding-bottom:18px}
-  .wives-list .person .anchor{position:absolute;left:50%;transform:translateX(-50%);bottom:-6px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.12);cursor:pointer}
-  /* Mỗi level hiển thị trên 1 hàng, không xuống dòng; khi tràn ngang sẽ cuộn theo .tree-area */
-  .children{display:flex;gap:12px;flex-wrap:nowrap;margin:10px 0;position:relative;z-index:2;align-items:flex-start;justify-content:flex-start;width:max-content}
+  .wives-list .person .anchor{position:absolute;left:50%;transform:translateX(-50%);bottom:-10px;display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:24px;padding:0 10px;border:none;border-radius:999px;box-shadow:0 10px 24px rgba(0,0,0,.16);cursor:pointer;transition:transform .15s, box-shadow .15s;color:#fff;font-size:10px;font-weight:700}
+  .wives-list .person .anchor:hover{transform:translateX(-50%) translateY(-1px);box-shadow:0 14px 28px rgba(0,0,0,.18)}
+  .anchor mat-icon{font-size:14px;width:14px;height:14px}
+  .anchor-label{display:inline}
+  .children{display:flex;gap:14px;flex-wrap:nowrap;margin:10px 0 16px;position:relative;z-index:2;align-items:flex-start;justify-content:center;width:max-content}
   .child-couple{display:flex;flex-direction:column;align-items:center}
   .spouse-small{position:relative;padding-bottom:18px}
-  .role-tag{font-size:11px;color:#555;margin-left:4px}
-    .ctx-menu{position:fixed;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:4px;display:flex;flex-direction:column;z-index:1000}
-    .empty{opacity:.7}
-  .name{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500}
+  .role-tag{font-size:11px;color:#888;margin-left:4px;font-weight:400}
+    .tree-hud{position:sticky;top:12px;left:0;z-index:4;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:4px 4px 0;pointer-events:none}
+    .tree-hud-left,.tree-hud-right{display:flex;flex-wrap:wrap;gap:8px;pointer-events:none}
+    .hud-card{pointer-events:auto;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:16px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);box-shadow:0 10px 24px rgba(0,0,0,.08)}
+    .hud-card.stats{flex-wrap:wrap}
+    .hud-stat{display:flex;flex-direction:column;min-width:72px}
+    .hud-stat strong{font-size:15px;color:#222;line-height:1}
+    .hud-stat span{font-size:11px;color:#777;text-transform:uppercase;letter-spacing:.06em}
+    .hud-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(25,118,210,.08);color:#245ea8;font-size:11px;font-weight:700}
+    .hud-chip mat-icon{font-size:15px;width:15px;height:15px}
+    .hud-actions{display:flex;align-items:center;gap:6px}
+    .hud-actions button{min-width:0}
+    .hud-readout{font-size:11px;color:#666;padding:0 2px;min-width:48px;text-align:center}
+    .ctx-menu{position:fixed;background:#fff;border:1px solid #e0e0e0;border-radius:14px;box-shadow:0 16px 32px rgba(0,0,0,.18);padding:8px;display:flex;flex-direction:column;z-index:1000;min-width:190px;max-width:min(280px,calc(100vw - 16px));gap:4px}
+    .ctx-menu button{justify-content:flex-start;text-align:left;border-radius:10px}
+    .ctx-menu.mobile{left:12px!important;right:12px;bottom:12px;top:auto!important;max-width:none;border-radius:18px;padding:12px;background:rgba(255,255,255,.98)}
+    .ctx-menu-header{display:flex;flex-direction:column;gap:2px;padding:4px 6px 10px;border-bottom:1px solid rgba(0,0,0,.08);margin-bottom:4px}
+    .ctx-menu-title{font-weight:700;color:#222}
+    .ctx-menu-subtitle{font-size:12px;color:#777}
+    .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:60px 20px;text-align:center;opacity:.85}
+    .empty-state mat-icon{font-size:64px;width:64px;height:64px;color:#bdbdbd}
+    .loading-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px;text-align:center}
+    .loading-spinner{width:40px;height:40px;border:3px solid #e0e0e0;border-top-color:#1976d2;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .error-banner{background:#fff3e0;color:#e65100;padding:12px 20px;border-radius:8px;margin:20px;text-align:center;display:flex;align-items:center;gap:8px;justify-content:center}
+    .gen-label{font-size:11px;color:#9e9e9e;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:4px 12px;background:rgba(0,0,0,.04);border-radius:20px;white-space:nowrap;user-select:none;margin:4px 0}
+  .name{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;font-size:13px}
+  .meta{display:none}
   .stats-inline{display:flex;gap:10px;align-items:center;margin-left:8px}
   .stat-item{display:flex;gap:4px;align-items:baseline;font-size:12px;color:#444}
   .stat-item strong{font-size:13px;color:#000}
   .draggable{cursor:grab;pointer-events:auto}
   .draggable.dragging{cursor:grabbing}
   .resizable{resize:both;overflow:auto;box-sizing:border-box}
-  /* Tắt khung/ô resize cho câu đối để chỉ còn chữ */
   .couplet-text.resizable{resize:none;overflow:visible;border:none;outline:none;box-shadow:none;background:transparent}
-  /* Canvas overflow visible để không cắt decor/text khi drag ra ngoài */
   .canvas{min-width:var(--paper-width);min-height:var(--paper-height);overflow:visible!important;position:relative;}
   .bg-rotator{max-width:100%;max-height:100%;}
   .decor.scroll{position:absolute;top:0;left:50%;transform:translate(-50%,0);max-width:5200px;width:32%;height:auto;z-index:5;pointer-events:auto}
@@ -121,6 +159,14 @@ import { TreeFontService, type FontItem } from './services/tree-font.service';
   .curved-char{display:inline-block;transform-origin:bottom center;}
   .bg-rotator{position:absolute;inset:0;background-repeat:no-repeat;background-position:center top;z-index:0;pointer-events:none;transition:transform .2s ease}
   .bg-rotator.rotated{transform:rotate(90deg) scale(2);transform-origin:center center}
+  .search-highlight{animation:searchPulse 1.5s ease 2;background:rgba(255,235,59,0.45)!important;border-radius:10px;box-shadow:0 0 12px 4px rgba(255,235,59,0.6)}
+  @keyframes searchPulse{0%,100%{box-shadow:0 0 12px 4px rgba(255,235,59,0.6)}50%{box-shadow:0 0 20px 8px rgba(255,235,59,0.9)}}
+  @media (max-width: 780px){
+    .tree-hud{top:8px;flex-direction:column;align-items:stretch}
+    .tree-hud-left,.tree-hud-right{pointer-events:auto}
+    .hud-card.stats{width:100%}
+    .hud-card.controls{justify-content:space-between}
+  }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -137,6 +183,7 @@ export class TreePage implements OnInit, AfterViewInit {
   private readonly decorService = inject(TreeDecorationService);
   private readonly textService = inject(TreeTextService);
   private readonly fontService = inject(TreeFontService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   families: Family[] = [];
   selectedFamilyId: string | null = null;
@@ -148,6 +195,8 @@ export class TreePage implements OnInit, AfterViewInit {
   allMembers: Member[] = [];
   spousesByMember: Record<string, Member[]> = {};
   private memberById: Map<string, Member> = new Map();
+  childCountByMember: Record<string, number> = {};
+  partnerCountByMember: Record<string, number> = {};
   connections: Array<{ x1:number;y1:number;x2:number;y2:number;color:string }> = [];
   childColors: Record<string, string> = {}; // Store child box border colors from connections
   private wifeColor = new Map<string,string>();
@@ -197,6 +246,85 @@ export class TreePage implements OnInit, AfterViewInit {
   couplet = this.textService.couplet;
   customFonts = this.fontService.customFonts;
 
+  // Loading / error from facade
+  get isLoading() { return this.treeFacade.loading(); }
+  get errorMessage() { return this.treeFacade.error(); }
+
+  retryLoad() { this.treeFacade.reload(); }
+
+  /** Get photo URL for a member */
+  getPhotoUrl(_m: Member): string | null {
+    // Tree nodes stay text-only. Photos remain available inside the edit dialog.
+    return null;
+  }
+
+  /** Label for generation level */
+  generationLabel(index: number): string {
+    const labels = ['Đời 2', 'Đời 3', 'Đời 4', 'Đời 5', 'Đời 6', 'Đời 7', 'Đời 8', 'Đời 9', 'Đời 10',
+      'Đời 11', 'Đời 12', 'Đời 13', 'Đời 14', 'Đời 15', 'Đời 16', 'Đời 17', 'Đời 18', 'Đời 19', 'Đời 20'];
+    return labels[index] || `Đời ${index + 2}`;
+  }
+
+  /** Display lifespan text */
+  lifespanText(m: Member): string {
+    const parts: string[] = [];
+    if (m.dob) parts.push(new Date(m.dob).getFullYear().toString());
+    if (m.dod) {
+      if (parts.length) parts.push('–');
+      else parts.push('? –');
+      parts.push(new Date(m.dod).getFullYear().toString());
+    }
+    return parts.join(' ');
+  }
+
+  /** Hiển thị tên không kèm họ (surname) của dòng họ */
+  displayName(m: Member | null): string {
+    if (!m?.fullName) return '';
+    const family = this.families.find(f => f.id === this.selectedFamilyId);
+    if (!family?.name) return m.fullName;
+    let fname = family.name;
+    if (fname.startsWith('Dòng họ ')) fname = fname.slice(8);
+    else if (fname.startsWith('Họ ')) fname = fname.slice(3);
+    const surname = fname.split(/[\s\-]/)[0].trim();
+    if (surname && m.fullName.startsWith(surname + ' ')) {
+      return m.fullName.slice(surname.length + 1);
+    }
+    return m.fullName;
+  }
+
+  private rebuildRelationshipCounters() {
+    const childCounts: Record<string, number> = {};
+    this.allMembers.forEach((member) => {
+      if (member.mother) childCounts[member.mother] = (childCounts[member.mother] || 0) + 1;
+      if (member.father) childCounts[member.father] = (childCounts[member.father] || 0) + 1;
+    });
+    this.childCountByMember = childCounts;
+
+    const partnerCounts: Record<string, number> = {};
+    Object.keys(this.spousesByMember).forEach((memberId) => {
+      partnerCounts[memberId] = (this.spousesByMember[memberId] || []).length;
+    });
+    this.partnerCountByMember = partnerCounts;
+  }
+
+  childCount(member: Member | null): number {
+    if (!member?.id) return 0;
+    return this.childCountByMember[member.id] || 0;
+  }
+
+  partnerCount(member: Member | null): number {
+    if (!member?.id) return 0;
+    return this.partnerCountByMember[member.id] || 0;
+  }
+
+  zoomPercent(): number {
+    return Math.round(this.zoom * 100);
+  }
+
+  nodeScalePercent(): number {
+    return Math.round(this.boxScale * 100);
+  }
+
   positions: Record<MovableLayer, LayerPosition> = cloneDefaultPositions();
   private dragState: { layer: MovableLayer; startX: number; startY: number; origin: LayerPosition; size: { w: number; h: number } } | null = null;
   scales: Record<MovableLayer, number> = cloneDefaultScales();
@@ -218,7 +346,7 @@ export class TreePage implements OnInit, AfterViewInit {
   @ViewChildren('childEl') childEls?: QueryList<ElementRef<HTMLElement>>;
   @ViewChildren('anchorEl') anchorEls?: QueryList<ElementRef<HTMLElement>>;
 
-  ctx = { visible: false, x: 0, y: 0, node: null as (Member | null) };
+  ctx = { visible: false, x: 0, y: 0, node: null as (Member | null), mobile: false };
 
   stats: { totalMembers: number; totalMale: number; totalFemale: number; totalAlive: number; totalDeceased: number; totalGenerations: number } = {
     totalMembers: 0, totalMale: 0, totalFemale: 0, totalAlive: 0, totalDeceased: 0, totalGenerations: 0
@@ -237,7 +365,6 @@ export class TreePage implements OnInit, AfterViewInit {
 
     effect(() => {
       const familyId = this.treeStore.selectedFamilyId();
-      console.log('🔄 Family changed effect triggered:', familyId);
       this.selectedFamilyId = familyId;
       if (!familyId) {
         this.textService.clearTextItems();
@@ -249,7 +376,6 @@ export class TreePage implements OnInit, AfterViewInit {
         return;
       }
 
-      console.log('📝 Loading data for family:', familyId);
       this.textService.loadTextItems(familyId);
       this.textService.loadCouplet(familyId);
       this.positions = loadPositions(this.positionsKey());
@@ -257,7 +383,6 @@ export class TreePage implements OnInit, AfterViewInit {
       this.decorService.loadDecor(familyId);
       this.fontService.loadFonts(familyId);
       this.treeFacade.setFamily(familyId);
-      console.log('✅ Data loaded - decorInstances:', this.decorInstances().length, 'textItems:', this.textItems().length);
     });
 
     effect(() => {
@@ -271,6 +396,10 @@ export class TreePage implements OnInit, AfterViewInit {
       this.stats = this.treeFacade.stats();
       this.focusRootId = this.treeFacade.focusRootId();
       this.includeSpousesInFocus = this.treeFacade.includeSpousesInFocus();
+      this.rebuildRelationshipCounters();
+      // Read loading signal so effect re-fires when loading ends (DOM renders tree)
+      const _loading = this.treeFacade.loading();
+      void _loading;
       this.scheduleConnections();
     });
   }
@@ -297,6 +426,46 @@ export class TreePage implements OnInit, AfterViewInit {
   resetPositions(): void {
     this.positions = cloneDefaultPositions();
     this.persistPositions();
+  }
+
+  adjustZoom(delta: number) {
+    const next = Math.min(2.2, Math.max(0.55, this.zoom + delta));
+    if (next === this.zoom) return;
+    this.zoom = next;
+    this.cdr.markForCheck();
+  }
+
+  zoomIn() {
+    this.adjustZoom(0.1);
+  }
+
+  zoomOut() {
+    this.adjustZoom(-0.1);
+  }
+
+  adjustNodeScale(delta: number) {
+    const next = Math.min(2.2, Math.max(0.7, this.boxScale + delta));
+    if (next === this.boxScale) return;
+    this.boxScale = next;
+    this.scheduleConnections();
+    this.cdr.markForCheck();
+  }
+
+  resetViewport() {
+    this.zoom = 1;
+    this.boxScale = 1;
+    this.centerRoot();
+    this.cdr.markForCheck();
+  }
+
+  fitTreeForReading() {
+    const area = this.treeAreaEl?.nativeElement;
+    if (!area) return;
+    const compact = area.clientWidth < 900;
+    this.zoom = compact ? 0.82 : 0.96;
+    this.boxScale = compact ? 0.94 : 1;
+    this.centerRoot();
+    this.cdr.markForCheck();
   }
   loadScales(): void {
     const key = this.scalesKey();
@@ -335,7 +504,14 @@ export class TreePage implements OnInit, AfterViewInit {
   }
 
   openBackgrounds(){
-    const ref = this.dialog.open(TreeBackgroundsDialog, { data: { selectedId: this.selectedBackgroundId }, width: '820px' });
+    if (!this.selectedFamilyId) {
+      this.snack.open('Hãy chọn dòng họ trước khi quản lý ảnh nền', 'Đóng', { duration: 2200 });
+      return;
+    }
+    const ref = this.dialog.open(TreeBackgroundsDialog, {
+      data: { selectedId: this.selectedBackgroundId, familyId: this.selectedFamilyId },
+      width: '820px'
+    });
     ref.afterClosed().subscribe((id: string | null | undefined) => {
       if (id === undefined) return; // closed without changes
       this.treeStore.setBackgroundSelection(id || null);
@@ -344,11 +520,11 @@ export class TreePage implements OnInit, AfterViewInit {
 
   openDecorDialog(){
     const ref = this.dialog.open(TreeDecorDialog, { data: { assets: this.decorAssets() }, width: '860px' });
-    ref.afterClosed().subscribe((res: DecorDialogResult | undefined) => {
+    ref.afterClosed().subscribe(async (res: DecorDialogResult | undefined) => {
       if (!res) return;
-      this.decorService.decorAssets.set(res.assets);
-      this.decorService.persistDecor(this.selectedFamilyId);
-      
+      // Sync new/removed assets to IndexedDB and update signal
+      await this.decorService.syncFromDialog(this.selectedFamilyId, res.assets);
+
       // If user clicked "Add to canvas" button
       if (res.addInstance) {
         this.decorService.addInstance(
@@ -371,10 +547,24 @@ export class TreePage implements OnInit, AfterViewInit {
     this.openTextDialog(undefined, true);
   }
 
-  createRoot(){
+  private async promptForName(config: TreeNamePromptData): Promise<string | null> {
+    const ref = this.dialog.open(TreeNamePromptDialog, {
+      data: config,
+      width: '440px',
+    });
+    return await firstValueFrom(ref.afterClosed());
+  }
+
+  async createRoot(){
     if (!this.selectedFamilyId) return;
     if (this.root){ this.snack.open('Đã có cụ tổ cho họ này', 'Đóng', { duration: 2000 }); return; }
-    const name = prompt('Họ tên cụ tổ?');
+    const name = await this.promptForName({
+      title: 'Tạo đời đầu',
+      label: 'Họ tên cụ tổ',
+      placeholder: 'Nhập họ tên đầy đủ',
+      confirmText: 'Tạo đời đầu',
+      helperText: 'Người này sẽ được dùng làm gốc hiển thị của cây gia phả.',
+    });
     if (!name) return;
     this.membersApi.create({ fullName: name, family: this.selectedFamilyId, gender: 'male' }).subscribe({
       next: _=>{ this.snack.open('Tạo cụ tổ thành công', 'Đóng', { duration: 2000 }); this.treeFacade.reload(); },
@@ -382,13 +572,39 @@ export class TreePage implements OnInit, AfterViewInit {
     });
   }
 
+  private showContextMenu(x: number, y: number, node: Member) {
+    const isMobile = window.innerWidth <= 720;
+    if (isMobile) {
+      this.ctx = { visible: true, x: 12, y: window.innerHeight - 12, node, mobile: true };
+      return;
+    }
+
+    const estimatedWidth = 220;
+    const estimatedHeight = 270;
+    const margin = 12;
+    const nextX = Math.min(Math.max(margin, x), Math.max(margin, window.innerWidth - estimatedWidth - margin));
+    const nextY = Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - estimatedHeight - margin));
+    this.ctx = { visible: true, x: nextX, y: nextY, node, mobile: false };
+  }
+
+  closeContextMenu(){
+    this.ctx = { visible: false, x: 0, y: 0, node: null, mobile: false };
+  }
+
   openContextMenu(ev: MouseEvent, node: Member){
     ev.preventDefault();
-    this.ctx = { visible: true, x: ev.clientX, y: ev.clientY, node };
+    this.showContextMenu(ev.clientX, ev.clientY, node);
+  }
+
+  openActions(ev: MouseEvent, node: Member) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.showContextMenu(ev.clientX, ev.clientY, node);
   }
 
   enterFocus(node: Member){
     if (!node?.id) return;
+    this.closeContextMenu();
     this.focusRootId = node.id;
     this.treeFacade.setFocus(node.id, this.includeSpousesInFocus);
     this.updateFocusParams();
@@ -398,6 +614,23 @@ export class TreePage implements OnInit, AfterViewInit {
     this.focusRootId = null;
     this.treeFacade.setFocus(null, this.includeSpousesInFocus);
     this.updateFocusParams();
+  }
+
+  scrollToMember(member: Member) {
+    if (!member?.id) return;
+    const el = document.querySelector(`[data-member-id="${member.id}"]`) as HTMLElement;
+    if (el) {
+      // Remove previous highlight
+      document.querySelectorAll('.search-highlight').forEach(e => e.classList.remove('search-highlight'));
+      // Add highlight
+      el.classList.add('search-highlight');
+      // Scroll into view
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      // Remove highlight after 3 seconds
+      setTimeout(() => el.classList.remove('search-highlight'), 3000);
+    } else {
+      this.snack.open(`Không tìm thấy "${this.displayName(member)}" trên cây hiện tại`, 'OK', { duration: 3000 });
+    }
   }
   toggleIncludeSpouses(val: boolean){
     this.includeSpousesInFocus = val;
@@ -413,14 +646,14 @@ export class TreePage implements OnInit, AfterViewInit {
 
   editInfo(node: Member | null){
     if (!node) return;
-    this.ctx.visible = false;
+    this.closeContextMenu();
     const ref = this.dialog.open(TreeEditMemberDialog, { data: { member: node }, width: '720px' });
     ref.afterClosed().subscribe((ok: boolean | undefined) => { if (ok) this.treeFacade.reload(); });
   }
 
   addWife(node: Member | null){
     if (!node) return;
-    this.ctx.visible = false;
+    this.closeContextMenu();
     const defaultRole: 'wife'|'husband' = node.gender === 'male' ? 'wife' : 'husband';
     const ref = this.dialog.open(TreeAddPartnerDialog, { data: { defaultRole }, width: '520px' });
     ref.afterClosed().subscribe((res: { fullName: string; gender: 'male'|'female' }|undefined)=>{
@@ -447,8 +680,14 @@ export class TreePage implements OnInit, AfterViewInit {
 
   async addChild(node: Member | null){
     if (!node || node.gender !== 'female') { this.snack.open('Chỉ thêm con từ người mẹ', 'Đóng', { duration: 2000 }); return; }
-    this.ctx.visible = false;
-    const childName = prompt('Họ tên con');
+    this.closeContextMenu();
+    const childName = await this.promptForName({
+      title: 'Thêm con',
+      label: 'Họ tên người con',
+      placeholder: 'Nhập họ tên đầy đủ',
+      confirmText: 'Thêm con',
+      helperText: `Con sẽ được gắn với mẹ là ${node.fullName}.`,
+    });
     if (!childName) return;
     let father: Member | null = null;
     try {
@@ -468,7 +707,13 @@ export class TreePage implements OnInit, AfterViewInit {
 
   async quickAddChild(mother: Member){
     if (mother.gender !== 'female') return;
-    const baseName = prompt('Tên con?');
+    const baseName = await this.promptForName({
+      title: 'Thêm con nhanh',
+      label: 'Họ tên người con',
+      placeholder: 'Nhập họ tên đầy đủ',
+      confirmText: 'Thêm con',
+      helperText: `Con sẽ được thêm dưới nhánh của ${mother.fullName}.`,
+    });
     if (!baseName) return;
     let father: Member | null = null;
     try {
@@ -491,7 +736,13 @@ export class TreePage implements OnInit, AfterViewInit {
     if (spouse.gender === 'female') { await this.quickAddChild(spouse); return; }
     // Nếu owner là nữ và spouse là nam => thêm con từ anchor của chồng nhưng vẫn gán mother = owner
     if (owner.gender === 'female' && spouse.gender === 'male'){
-      const baseName = prompt('Tên con?');
+      const baseName = await this.promptForName({
+        title: 'Thêm con',
+        label: 'Họ tên người con',
+        placeholder: 'Nhập họ tên đầy đủ',
+        confirmText: 'Thêm con',
+        helperText: `Con sẽ gắn mẹ là ${owner.fullName} và cha là ${spouse.fullName}.`,
+      });
       if (!baseName) return;
       // Anchor click trên 1 người chồng cụ thể: dùng trực tiếp người đó làm cha, KHÔNG mở dialog.
       const payload: any = { fullName: baseName, family: this.selectedFamilyId!, mother: owner.id, father: spouse.id };
@@ -516,40 +767,87 @@ export class TreePage implements OnInit, AfterViewInit {
   }
 
   @HostListener('window:resize')
-  onResize(){ this.computeConnections(); }
+  onResize(){
+    this.computeConnections();
+    if (this.ctx.visible && this.ctx.node) {
+      this.showContextMenu(this.ctx.x, this.ctx.y, this.ctx.node);
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(ev: MouseEvent){
+    if (!this.ctx.visible) return;
+    const target = ev.target as HTMLElement | null;
+    if (target?.closest('.ctx-menu, .person-action')) return;
+    this.closeContextMenu();
+  }
+
+  @HostListener('window:keydown.escape')
+  onEscapeKey(){
+    if (this.ctx.visible) this.closeContextMenu();
+  }
 
   computeConnections(){
-    const base = (this.canvasEl?.nativeElement || this.treeAreaEl?.nativeElement);
-    if (!base) return;
-    const baseRect = base.getBoundingClientRect();
-    const anchorRects = new Map<string, DOMRect>();
-    this.anchorEls?.forEach(el => {
-      const id = el.nativeElement.getAttribute('data-id') || '';
-      if (!id) return;
-      anchorRects.set(id, el.nativeElement.getBoundingClientRect());
+    const canvas = this.canvasEl?.nativeElement;
+    if (!canvas) return;
+    // Helper: walk offsetParent chain to get LOCAL coords relative to canvas.
+    // This is immune to CSS transforms — offsetLeft/offsetTop are in untransformed space.
+    const treeScale = this.zoom * (this.scales['tree'] || 1);
+    const canvasRect = canvas.getBoundingClientRect();
+    const localRect = (el: HTMLElement): { left: number; top: number; width: number; height: number } => {
+      const rect = el.getBoundingClientRect();
+      return {
+        left: (rect.left - canvasRect.left) / treeScale,
+        top: (rect.top - canvasRect.top) / treeScale,
+        width: rect.width / treeScale,
+        height: rect.height / treeScale,
+      };
+    };
+    const anchorCandidates = new Map<string, Array<{ key: string; memberId: string; x: number; y: number }>>();
+    let anchorIndex = 0;
+    canvas.querySelectorAll<HTMLElement>('[data-member-id]').forEach((el) => {
+      const memberId = el.getAttribute('data-member-id') || '';
+      if (!memberId) return;
+      const personBox = localRect(el);
+      const parentBoxEl = el.closest('.couple-box') as HTMLElement | null;
+      const parentBox = parentBoxEl ? localRect(parentBoxEl) : personBox;
+      const existing = anchorCandidates.get(memberId) || [];
+      existing.push({
+        key: `${memberId}:${anchorIndex++}`,
+        memberId,
+        x: personBox.left + (personBox.width / 2),
+        y: parentBox.top + parentBox.height,
+      });
+      anchorCandidates.set(memberId, existing);
     });
-    const childRects: Array<{ elRect: DOMRect; childId?: string; motherId?: string; fatherId?: string }> = [];
+
+    const childTargets: Array<{ point: { x: number; y: number }; childId?: string; motherId?: string; fatherId?: string }> = [];
     this.childEls?.forEach(el => {
       const childId = el.nativeElement.getAttribute('data-id') || undefined;
       const motherId = el.nativeElement.getAttribute('data-mother') || undefined;
       const fatherId = el.nativeElement.getAttribute('data-father') || undefined;
-      childRects.push({ elRect: el.nativeElement.getBoundingClientRect(), childId, motherId, fatherId });
+      const box = localRect(el.nativeElement);
+      childTargets.push({ point: { x: box.left + (box.width / 2), y: box.top }, childId, motherId, fatherId });
     });
+    // Use local rects — baseRect left/top = 0 since coords are already relative to canvas
+    const baseRect = new DOMRect(0, 0, this.paperWidth, this.paperHeight);
     const result = buildConnections({
       baseRect,
-      anchorRects,
-      childRects,
+      anchorCandidates,
+      childTargets,
       memberById: this.memberById,
       spousesByMember: this.spousesByMember,
       style: this.connectionStyle,
       colors: this.COLORS,
       colorFatherMotherPair: this.colorFatherMotherPair,
       colorMotherFatherPair: this.colorMotherFatherPair,
+      scale: 1, // coords are already in local space — no scale correction needed
     });
     this.connections = result.connections;
     this.childColors = result.childColors;
     this.overlayW = result.overlayW;
     this.overlayH = result.overlayH;
+    this.cdr.markForCheck();
   }
   // Bảo đảm vẽ sau khi DOM thực sự có các phần tử (QueryList cập nhật). Dùng double rAF tránh cần thao tác phóng to mới xuất hiện.
   private scheduleConnections(){
@@ -798,15 +1096,15 @@ export class TreePage implements OnInit, AfterViewInit {
     return `translate(${p.x}px, ${p.y}px) scale(${this.zoom * extraScale})`;
   }
   onWheel(ev: WheelEvent){
+    if (ev.altKey){
+      ev.preventDefault();
+      this.adjustZoom(ev.deltaY > 0 ? -0.08 : 0.08);
+      return;
+    }
     // Ctrl + wheel: thay đổi kích cỡ node (boxScale)
     if (ev.ctrlKey){
       ev.preventDefault();
-      const delta = ev.deltaY > 0 ? -0.1 : 0.1;
-      const next = Math.min(2.5, Math.max(0.1, this.boxScale + delta));
-      if (next !== this.boxScale){
-        this.boxScale = next;
-        this.scheduleConnections();
-      }
+      this.adjustNodeScale(ev.deltaY > 0 ? -0.08 : 0.08);
       return;
     }
   }
@@ -820,11 +1118,20 @@ export class TreePage implements OnInit, AfterViewInit {
   genderColor(gender?: string){
     return (gender||'').toLowerCase() === 'female' ? '#d81b60' : '#1976d2';
   }
-  deleteNode(node: Member | null){
+  async deleteNode(node: Member | null){
     if (!node) return;
-    this.ctx.visible = false;
-    const ok = confirm(`Xóa ${node.fullName}? Hành động không thể hoàn tác.`);
-    if (!ok) return;
+    this.closeContextMenu();
+    const confirmed = await firstValueFrom(
+      this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Xóa thành viên',
+          message: `Bạn có chắc muốn xóa ${node.fullName}? Hành động này không thể hoàn tác.`,
+          confirmText: 'Xóa thành viên',
+          tone: 'warn',
+        },
+      }).afterClosed(),
+    );
+    if (!confirmed) return;
     this.membersApi.delete(node.id!).subscribe({
       next: ()=>{ this.snack.open('Đã xóa', 'Đóng', { duration: 1500 }); this.treeFacade.reload(); },
       error: (e)=> this.snack.open(e?.error?.message || 'Xóa thất bại', 'Đóng', { duration: 2000 })
@@ -865,10 +1172,10 @@ export class TreePage implements OnInit, AfterViewInit {
     try {
       await this.decorService.addDecor(this.selectedFamilyId, slot, file);
       
-      // Get the newly added asset (first in the array)
+      // Get the newly added asset (last in the array)
       const assets = this.decorService.getDecorAssets(slot);
       if (assets.length > 0) {
-        const newAsset = assets[0];
+        const newAsset = assets[assets.length - 1];
         // Add instance to canvas at center
         this.decorService.addInstance(newAsset.id, slot, this.paperWidth, this.paperHeight);
       }
@@ -950,12 +1257,20 @@ export class TreePage implements OnInit, AfterViewInit {
   }
 
   // Context menu for decoration instance (delete)
-  onDecorInstanceContext(instance: any, ev: MouseEvent): void {
+  async onDecorInstanceContext(instance: any, ev: MouseEvent): Promise<void> {
     ev.preventDefault();
-    const ok = confirm('Xóa trang trí này?');
-    if (ok) {
-      this.removeDecorInstance(instance.id);
-    }
+    const confirmed = await firstValueFrom(
+      this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Xóa trang trí',
+          message: 'Bạn có chắc muốn xóa trang trí này khỏi canvas?',
+          confirmText: 'Xóa trang trí',
+          tone: 'warn',
+        },
+      }).afterClosed(),
+    );
+    if (!confirmed) return;
+    this.removeDecorInstance(instance.id);
   }
 
 

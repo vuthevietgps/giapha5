@@ -74,11 +74,12 @@
             <h3>{{ currentPlan.name }}</h3>
             <p class="muted">{{ currentPlan.price }} · {{ currentPlan.period }}</p>
           </div>
-          <span class="badge">Đang dùng</span>
+          <span class="badge" [class.warn]="currentPlan.status === 'PENDING_PAYMENT'">
+            {{ currentPlan.status === 'PENDING_PAYMENT' ? 'Chờ thanh toán' : 'Đang dùng' }}
+          </span>
         </div>
 
         <div class="plan-meta">
-          <div><span class="label">Phả đồ trực tuyến:</span> <strong>{{ currentPlan.domain }}</strong></div>
           <div><span class="label">Ngày bắt đầu:</span> <strong>{{ currentPlan.startedAt }}</strong></div>
           <div><span class="label">Trạng thái:</span> <strong>{{ currentPlan.renewNote }}</strong></div>
         </div>
@@ -116,12 +117,12 @@
           </div>
         </div>
 
-        <div class="pricing-grid">
-          <div class="pricing-item" *ngFor="let plan of pricingPlans" [class.highlight]="plan.highlight">
+        <div class="pricing-grid" *ngIf="plans.length > 0">
+          <div class="pricing-item" *ngFor="let plan of plans" [class.highlight]="plan.slug === 'basic'">
             <div class="pricing-head">
-              <div class="pill" *ngIf="plan.highlight">Khuyên dùng</div>
+              <div class="pill" *ngIf="plan.slug === 'basic'">Khuyên dùng</div>
               <h4>{{ plan.name }}</h4>
-              <p class="price">{{ plan.price }} <span class="period">{{ plan.period }}</span></p>
+              <p class="price">{{ formatPrice(plan.price) }} <span class="period">/{{ plan.durationMonths }} tháng</span></p>
             </div>
             <ul class="feature-list">
               <li *ngFor="let feature of plan.features">
@@ -129,8 +130,12 @@
                 <span>{{ feature }}</span>
               </li>
             </ul>
-            <button mat-stroked-button color="primary">{{ plan.cta }}</button>
+            <button mat-stroked-button color="primary" routerLink="/plans">Nâng cấp ngay</button>
           </div>
+        </div>
+
+        <div *ngIf="plans.length === 0" class="pricing-empty">
+          <p>Đang tải gói dịch vụ...</p>
         </div>
       </mat-card>
     </div>

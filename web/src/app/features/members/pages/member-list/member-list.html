@@ -7,9 +7,9 @@
   </a>
 </mat-toolbar>
 
-<mat-card class="card page-container" style="display:grid; gap:12px;">
-  <div style="display:flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-    <mat-form-field appearance="outline" style="width: 260px;">
+<mat-card class="card page-container">
+  <div class="filters-form member-filters">
+    <mat-form-field appearance="outline">
       <mat-label>Dòng họ</mat-label>
       <mat-select [formControl]="filters.controls.family">
         <mat-option [value]="''">Tất cả</mat-option>
@@ -17,7 +17,7 @@
       </mat-select>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" style="flex:1 1 260px; min-width: 260px;">
+    <mat-form-field appearance="outline" class="search-field">
       <mat-label>Tìm theo tên</mat-label>
       <input matInput placeholder="Nhập tên thành viên" [formControl]="filters.controls.q" />
     </mat-form-field>

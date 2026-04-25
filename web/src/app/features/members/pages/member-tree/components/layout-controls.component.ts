@@ -10,7 +10,7 @@ import { FormsModule } from '@angular/forms';
   selector: 'app-layout-controls',
   standalone: true,
   imports: [CommonModule, FormsModule, MatFormFieldModule, MatSelectModule, MatOptionModule, MatInputModule],
-  styles: [`:host{display:flex;align-items:center;gap:8px;flex:0 0 auto;} mat-form-field{margin:0;} .w-compact{width:120px;} .w-narrow{width:100px;}`],
+  styles: [`:host{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap} mat-form-field{margin:0;} .w-compact{width:140px;max-width:100%;} .w-narrow{width:120px;max-width:100%;} @media (max-width:640px){:host{width:100%}.w-compact,.w-narrow{width:100%}}`],
   template: `
     <mat-form-field appearance="outline" class="w-compact">
       <mat-label>Kiểu</mat-label>

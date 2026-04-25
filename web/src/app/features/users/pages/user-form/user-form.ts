@@ -7,6 +7,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DEFAULT_USER_ROLE, USER_ROLE_LABELS, USER_ROLES, User } from '../../models/user.model';
 import { UserService } from '../../services/user';
@@ -26,6 +28,8 @@ import { PermissionService } from '../../../../core/services/permission.service'
     MatSelectModule,
     MatButtonModule,
     MatCardModule,
+    MatIconModule,
+    MatToolbarModule,
     MatSnackBarModule,
   ],
   templateUrl: './user-form.html',
@@ -44,6 +48,7 @@ export class UserForm implements OnInit {
   roles = USER_ROLES;
   roleLabels = USER_ROLE_LABELS;
   families: Family[] = [];
+  hidePassword = true;
 
   form = this.fb.group({
     fullName: ['', Validators.required],

@@ -142,13 +142,9 @@ export class PrintPage implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.loadFamilies();
-    this.loadBackgrounds();
     this.loadDecorFromStorage();
     this.loadTreeZoom();
     this.loadPositions();
-    const savedBg = localStorage.getItem('print:selectedBackground');
-    this.selectedBackgroundId = savedBg || null;
-    this.updateBackgroundUrl();
     this.loadCouplet();
     this.loadFonts();
   }
@@ -168,6 +164,8 @@ export class PrintPage implements OnInit, AfterViewInit {
 
   onFamilyChange(familyId: string | null): void {
     this.selectedFamilyId = familyId;
+    this.loadBackgroundChoice();
+    this.loadBackgrounds();
     this.loadTreeAssetForFamily();
   }
 
@@ -178,8 +176,10 @@ export class PrintPage implements OnInit, AfterViewInit {
   onBackgroundChange(val: string | null): void {
     this.selectedBackgroundId = val;
     this.updateBackgroundUrl();
-    if (val) localStorage.setItem('print:selectedBackground', val);
-    else localStorage.removeItem('print:selectedBackground');
+    const key = this.backgroundSelectionKey();
+    if (!key) return;
+    if (val) localStorage.setItem(key, val);
+    else localStorage.removeItem(key);
   }
 
   async onDecorUpload(slot: DecorSlot, event: Event): Promise<void> {
@@ -332,13 +332,20 @@ export class PrintPage implements OnInit, AfterViewInit {
       if (!this.selectedFamilyId && this.families.length) {
         this.selectedFamilyId = this.families[0].id || null;
       }
+      this.loadBackgroundChoice();
+      this.loadBackgrounds();
       this.loadTreeAssetForFamily();
     });
   }
 
   private loadBackgrounds(): void {
-    this.backgroundsApi.list().subscribe((list) => {
+    this.backgroundsApi.list(this.selectedFamilyId).subscribe((list) => {
       this.backgrounds = list || [];
+      if (this.selectedBackgroundId && !this.backgrounds.some((bg) => bg.id === this.selectedBackgroundId)) {
+        this.selectedBackgroundId = null;
+        const key = this.backgroundSelectionKey();
+        if (key) localStorage.removeItem(key);
+      }
       this.updateBackgroundUrl();
     });
   }
@@ -366,6 +373,16 @@ export class PrintPage implements OnInit, AfterViewInit {
 
   private updateBackgroundUrl(): void {
     this.backgroundUrl = this.selectedBackgroundId ? this.backgroundsApi.fileUrl(this.selectedBackgroundId) : null;
+  }
+
+  private loadBackgroundChoice(): void {
+    const key = this.backgroundSelectionKey();
+    this.selectedBackgroundId = key ? localStorage.getItem(key) : null;
+    this.updateBackgroundUrl();
+  }
+
+  private backgroundSelectionKey(): string | null {
+    return this.selectedFamilyId ? `print:selectedBackground:${this.selectedFamilyId}` : null;
   }
 
   private loadDecorFromStorage(): void {

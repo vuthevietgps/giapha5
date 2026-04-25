@@ -60,11 +60,6 @@ function createParentChildConnections(
         // Use motherIdUsed from the couple - this is set correctly in tree-data.util.ts
         const motherId = (child as any)?.motherIdUsed;
         
-        // Debug: log child and mother info
-        if (parent.key.includes('69b01a')) { // Debug specific parent
-          console.log(`Child ${childKey} (${child?.male?.fullName || child?.female?.fullName}) has mother: ${motherId}`);
-        }
-        
         const group = childrenByMother.get(motherId) || [];
         group.push(childKey);
         childrenByMother.set(motherId, group);

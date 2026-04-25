@@ -1,9 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RESOURCE_KEY, ACTION_KEY } from '../decorators/roles.decorator';
+import { UserRole } from '../../users/schemas/user.schema';
 
-// Định nghĩa permissions giống frontend
-const ROLE_PERMISSIONS = {
+const ROLE_PERMISSIONS: Record<string, Record<string, Record<string, boolean>>> = {
   GIAM_DOC: {
     users: { create: true, read: true, update: true, delete: true },
     families: { create: true, read: true, update: true, delete: true },
@@ -69,7 +69,7 @@ export class PermissionsGuard implements CanActivate {
     const { user } = context.switchToHttp().getRequest();
     
     if (!user) {
-      throw new ForbiddenException('Bạn chưa đăng nhập');
+      throw new UnauthorizedException('Bạn chưa đăng nhập');
     }
     
     const permissions = ROLE_PERMISSIONS[user.role as keyof typeof ROLE_PERMISSIONS];

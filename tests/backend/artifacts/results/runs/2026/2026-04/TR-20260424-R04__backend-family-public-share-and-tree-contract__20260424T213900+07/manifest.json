@@ -1,0 +1,78 @@
+{
+  "testRunId": "TR-20260424-R04",
+  "resultId": "RS-20260424-BE-R04",
+  "startedAt": "2026-04-24T21:31:58+07:00",
+  "finishedAt": "2026-04-24T21:39:00+07:00",
+  "environment": {
+    "workspace": "C:\\Users\\PC\\Documents\\code\\giapha5-version7",
+    "component": "server",
+    "shell": "powershell",
+    "timezone": "Asia/Bangkok",
+    "gitRef": "b7c6794",
+    "branch": "HEAD"
+  },
+  "scope": [
+    "backend family public-share contract",
+    "backend members tree relationship contract",
+    "targeted bug reproduction for spouse cross-family write and reparent union invariant",
+    "full backend e2e regression",
+    "full backend unit regression",
+    "backend build regression"
+  ],
+  "commands": [
+    "npm run test:e2e -- --runInBand server/test/families/families-public-share.contract.e2e-spec.ts server/test/members/members-tree.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand server/test/families/families-public-share.contract.e2e-spec.ts server/test/members/members-tree.contract.e2e-spec.ts",
+    "npm run test:e2e -- --runInBand",
+    "npm test -- --runInBand",
+    "npm run build"
+  ],
+  "cases": [
+    { "id": "BE-BUILD-001", "status": "PASSED" },
+    { "id": "BE-UNIT-001", "status": "PASSED" },
+    { "id": "BE-E2E-001", "status": "PASSED" },
+    { "id": "BE-TREE-003", "status": "PASSED" },
+    { "id": "BE-TREE-004", "status": "PASSED" },
+    { "id": "BE-TREE-005", "status": "PASSED" },
+    { "id": "BE-TREE-006", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-TREE-007", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PUBLIC-002", "status": "PASSED" },
+    { "id": "BE-PUBLIC-003", "status": "PASSED" },
+    { "id": "BE-PUBLIC-004", "status": "PASSED" },
+    { "id": "BE-PUBLIC-005", "status": "PASSED" },
+    { "id": "BE-AUTH-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-AUTH-002", "status": "PASSED" },
+    { "id": "BE-AUTH-003", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-SUBS-002", "status": "PASSED" },
+    { "id": "BE-SUBS-003", "status": "PASSED" },
+    { "id": "BE-SUBS-004", "status": "PASSED" },
+    { "id": "BE-PLAN-001", "status": "FAILED -> FIXED -> PASSED" },
+    { "id": "BE-PAY-001", "status": "PASSED" },
+    { "id": "BE-PAY-002", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-003", "status": "PASSED" },
+    { "id": "BE-PAY-004", "status": "GAP FOUND -> FIXED -> PASSED" },
+    { "id": "BE-PAY-005", "status": "PASSED" }
+  ],
+  "bugs": [
+    {
+      "id": "BE-TREE-006",
+      "title": "Cross-family spouse assignment was accepted and mutated an out-of-scope member",
+      "status": "FAILED -> FIXED -> PASSED"
+    },
+    {
+      "id": "BE-TREE-007",
+      "title": "Reparent accepted father and mother without an existing union",
+      "status": "FAILED -> FIXED -> PASSED"
+    }
+  ],
+  "openRisks": [
+    "VNPay return/verify contracts not yet executed",
+    "register rollback on partial side-effect failure not yet executed",
+    "mail delivery not asserted; current e2e only proves flow survives SMTP failure",
+    "true payment concurrency/race behavior not yet executed",
+    "billing-history list visibility policy for /api/subscriptions/payments remains unresolved",
+    "public family payload minimization not yet executed",
+    "setChildren union-invariant and normalize dirty-data scenarios were hardened in code but not executed directly",
+    "invalid ObjectId contract handling across tree endpoints not yet executed"
+  ]
+}

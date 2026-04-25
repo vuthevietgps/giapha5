@@ -1,53 +1,89 @@
-<p>user-form works!</p>
-<mat-card>
-	<form [formGroup]="form" (ngSubmit)="save()" style="display: grid; gap: 16px; max-width: 600px;">
-		<h2>{{ id ? 'Sửa người dùng' : 'Thêm người dùng' }}</h2>
+<mat-toolbar color="primary" class="form-toolbar">
+	<a mat-icon-button routerLink="/users" class="back-btn">
+		<mat-icon>arrow_back</mat-icon>
+	</a>
+	<span>{{ id ? 'Sửa người dùng' : 'Thêm người dùng' }}</span>
+</mat-toolbar>
 
-		<mat-form-field appearance="outline">
-			<mat-label>Họ tên</mat-label>
-			<input matInput formControlName="fullName" />
-		</mat-form-field>
+<div class="form-container">
+	<mat-card class="form-card">
+		<mat-card-content>
+			<form [formGroup]="form" (ngSubmit)="save()" class="user-form">
+				<h3 class="section-title">
+					<mat-icon>person</mat-icon>
+					Thông tin tài khoản
+				</h3>
 
-		<mat-form-field appearance="outline">
-			<mat-label>Email đăng nhập</mat-label>
-			<input matInput type="email" formControlName="email" />
-		</mat-form-field>
+				<mat-form-field appearance="outline" class="full-width">
+					<mat-label>Họ tên</mat-label>
+					<input matInput formControlName="fullName" placeholder="Nguyễn Văn A" />
+					<mat-icon matPrefix>badge</mat-icon>
+					<mat-error *ngIf="form.get('fullName')?.hasError('required')">Vui lòng nhập họ tên</mat-error>
+				</mat-form-field>
 
-		<mat-form-field appearance="outline">
-			<mat-label>Mật khẩu</mat-label>
-			<input matInput type="password" formControlName="password" />
-			<mat-hint>Ít nhất 6 ký tự</mat-hint>
-		</mat-form-field>
+				<mat-form-field appearance="outline" class="full-width">
+					<mat-label>Email đăng nhập</mat-label>
+					<input matInput type="email" formControlName="email" placeholder="email@example.com" />
+					<mat-icon matPrefix>email</mat-icon>
+					<mat-error *ngIf="form.get('email')?.hasError('required')">Vui lòng nhập email</mat-error>
+					<mat-error *ngIf="form.get('email')?.hasError('email')">Email không hợp lệ</mat-error>
+				</mat-form-field>
 
-		<mat-form-field appearance="outline">
-			<mat-label>Vai trò</mat-label>
-			<mat-select formControlName="role">
-				<mat-option *ngFor="let r of roles" [value]="r">{{ roleLabels[r] }}</mat-option>
-			</mat-select>
-		</mat-form-field>
+				<mat-form-field appearance="outline" class="full-width">
+					<mat-label>{{ id ? 'Mật khẩu mới (để trống nếu không đổi)' : 'Mật khẩu' }}</mat-label>
+					<input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" />
+					<mat-icon matPrefix>lock</mat-icon>
+					<button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+						<mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+					</button>
+					<mat-hint>Ít nhất 6 ký tự</mat-hint>
+				</mat-form-field>
 
-		<!-- Field cho Quản lý: chọn nhiều dòng họ -->
-		<mat-form-field appearance="outline" *ngIf="selectedRole === 'QUAN_LY'">
-			<mat-label>Dòng họ được quản lý</mat-label>
-			<mat-select formControlName="managedFamilies" multiple>
-				<mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
-			</mat-select>
-			<mat-hint>Chọn các dòng họ mà quản lý này được phép quản lý</mat-hint>
-		</mat-form-field>
+				<h3 class="section-title">
+					<mat-icon>admin_panel_settings</mat-icon>
+					Phân quyền
+				</h3>
 
-		<!-- Field cho Nhân viên và Trưởng họ: chọn 1 dòng họ -->
-		<mat-form-field appearance="outline" *ngIf="selectedRole === 'NHAN_VIEN' || selectedRole === 'TRUONG_HO'">
-			<mat-label>Dòng họ được chỉ định</mat-label>
-			<mat-select formControlName="assignedFamily">
-				<mat-option value="">-- Chọn dòng họ --</mat-option>
-				<mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
-			</mat-select>
-			<mat-hint>Chọn dòng họ mà {{ selectedRole === 'NHAN_VIEN' ? 'nhân viên' : 'trưởng họ' }} này được phụ trách</mat-hint>
-		</mat-form-field>
+				<mat-form-field appearance="outline" class="full-width">
+					<mat-label>Vai trò</mat-label>
+					<mat-select formControlName="role">
+						<mat-option *ngFor="let r of roles" [value]="r">{{ roleLabels[r] }}</mat-option>
+					</mat-select>
+					<mat-icon matPrefix>security</mat-icon>
+				</mat-form-field>
 
-		<div style="display:flex; gap: 8px;">
-			<button mat-flat-button color="primary" type="submit">Lưu</button>
-			<a mat-stroked-button color="accent" routerLink="/users">Hủy</a>
-		</div>
-	</form>
-</mat-card>
+				<!-- Field cho Quản lý: chọn nhiều dòng họ -->
+				<mat-form-field appearance="outline" class="full-width" *ngIf="selectedRole === 'QUAN_LY'">
+					<mat-label>Dòng họ được quản lý</mat-label>
+					<mat-select formControlName="managedFamilies" multiple>
+						<mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
+					</mat-select>
+					<mat-icon matPrefix>diversity_3</mat-icon>
+					<mat-hint>Chọn các dòng họ mà quản lý này được phép quản lý</mat-hint>
+				</mat-form-field>
+
+				<!-- Field cho Nhân viên và Trưởng họ: chọn 1 dòng họ -->
+				<mat-form-field appearance="outline" class="full-width" *ngIf="selectedRole === 'NHAN_VIEN' || selectedRole === 'TRUONG_HO'">
+					<mat-label>Dòng họ được chỉ định</mat-label>
+					<mat-select formControlName="assignedFamily">
+						<mat-option value="">-- Chọn dòng họ --</mat-option>
+						<mat-option *ngFor="let f of families" [value]="f.id">{{ f.name }}</mat-option>
+					</mat-select>
+					<mat-icon matPrefix>account_tree</mat-icon>
+					<mat-hint>Chọn dòng họ mà {{ selectedRole === 'NHAN_VIEN' ? 'nhân viên' : 'trưởng họ' }} này được phụ trách</mat-hint>
+				</mat-form-field>
+
+				<div class="form-actions">
+					<button mat-flat-button color="primary" type="submit" class="save-btn">
+						<mat-icon>save</mat-icon>
+						{{ id ? 'Cập nhật' : 'Tạo mới' }}
+					</button>
+					<a mat-stroked-button routerLink="/users" class="cancel-btn">
+						<mat-icon>close</mat-icon>
+						Hủy
+					</a>
+				</div>
+			</form>
+		</mat-card-content>
+	</mat-card>
+</div>

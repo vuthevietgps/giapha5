@@ -1,11 +1,13 @@
-import { IsArray, IsDateString, IsMongoId, IsOptional, ArrayMinSize } from 'class-validator';
+import { IsArray, IsDateString, IsMongoId, IsOptional, ArrayMaxSize, ArrayMinSize, ArrayUnique } from 'class-validator';
 
 export class CreateUnionDto {
   @IsMongoId()
   family!: string;
 
   @IsArray()
-  @ArrayMinSize(1)
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @ArrayUnique()
   @IsMongoId({ each: true })
   partners!: string[];
 

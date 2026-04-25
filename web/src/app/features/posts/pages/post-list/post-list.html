@@ -1,12 +1,13 @@
-<mat-toolbar color="transparent" class="toolbar">
+<mat-toolbar color="primary" class="toolbar">
+  <span>Bài viết dòng họ</span>
   <span class="spacer"></span>
-  <button mat-raised-button color="primary" (click)="openCreateDialog()">
+  <button *ngIf="canCreatePosts" mat-raised-button color="primary" (click)="openCreateDialog()">
     <mat-icon>add</mat-icon>
     Thêm bài viết
   </button>
 </mat-toolbar>
 
-<mat-card>
+<mat-card class="card page-container post-list-card">
   <mat-card-title>Danh sách bài viết</mat-card-title>
   <mat-card-content>
     <mat-nav-list>

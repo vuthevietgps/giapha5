@@ -1,46 +1,38 @@
-import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Request, Response, NextFunction } from 'express';
 
-// Mock authentication middleware - thay thế bằng JWT/Session thực tế
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-  use(req: Request, res: Response, next: NextFunction) {
-    // TODO: Implement real authentication
-    // For now, mock user from x-user-info header sent by frontend
-    const userInfoHeader = req.headers['x-user-info'] as string;
-    
-    if (!userInfoHeader) {
-      // Mock user mặc định cho testing (chỉ khi không có header)
-      (req as any).user = {
-        id: '1',
-        email: 'admin@example.com',
-        role: 'GIAM_DOC',
-        managedFamilies: [],
-      };
+  constructor(private readonly jwtService: JwtService) {}
+
+  use(req: Request, _res: Response, next: NextFunction) {
+    // Public routes that don't require authentication
+    const publicPaths = ['/api/auth/login', '/api/auth/register', '/api/auth/verify-email', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/subscriptions/plans', '/api/payments/vnpay-return', '/api/families/public/'];
+    if (publicPaths.some(p => req.path.startsWith(p))) {
       return next();
     }
-    
-    try {
-      // Decode user info từ header (frontend sẽ gửi base64 encoded JSON)
-      const userJson = Buffer.from(userInfoHeader, 'base64').toString('utf-8');
-      const user = JSON.parse(userJson);
-      (req as any).user = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        managedFamilies: user.managedFamilies || [],
-        assignedFamily: user.assignedFamily,
-      };
-      next();
-    } catch (error) {
-      // Fallback to default user if parsing fails
-      (req as any).user = {
-        id: '1',
-        email: 'admin@example.com',
-        role: 'GIAM_DOC',
-        managedFamilies: [],
-      };
-      next();
+
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      try {
+        const payload = this.jwtService.verify(token);
+        (req as any).user = {
+          id: payload.id,
+          email: payload.email,
+          role: payload.role,
+          managedFamilies: payload.managedFamilies || [],
+          assignedFamily: payload.assignedFamily,
+        };
+      } catch {
+        // Invalid token - user will be null, guards will reject
+        (req as any).user = null;
+      }
+    } else {
+      (req as any).user = null;
     }
+
+    next();
   }
 }

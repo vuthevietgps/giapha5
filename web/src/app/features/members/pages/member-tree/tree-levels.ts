@@ -1,43 +1,54 @@
-import type { Member } from '../../models/member.model';
+import { sortPeopleByDobAsc, type TreePersonLike } from './tree-graph';
 
-// Builds generational levels from a root member.
-// Keeps ordering of siblings by ascending DOB and groups children by mothers (root wives or female spouses).
-export function buildLevels(members: Member[], root: Member, spousesByMember: Record<string, Member[]>, femaleFirst = false): Member[][] {
-  const levels: Member[][] = [];
-  const visited = new Set<string>();
-  const getFemaleSpouses = (m: Member) => (spousesByMember[m.id!]||[]).filter(s=> s.gender==='female');
-  const sortByDobAsc = (arr: Member[]) => arr.sort((a,b)=>{
-    const da = a.dob ? new Date(a.dob as any).getTime() : Number.POSITIVE_INFINITY;
-    const db = b.dob ? new Date(b.dob as any).getTime() : Number.POSITIVE_INFINITY;
-    return da - db; // older first (left), unknowns to the right
-  });
-  // Generation 2: children of root (father match OR mother is one of root wives)
-  const rootWives = getFemaleSpouses(root).map(w=> w.id!);
-  let current: Member[] = members.filter(m=> m.father===root.id || (m.mother && rootWives.includes(m.mother)));
-  sortByDobAsc(current);
-  current.forEach(c=> visited.add(c.id!));
-  if (current.length) levels.push(current);
-  while (current.length){
-    const nextOrdered: Member[] = [];
-    for (const p of current){
-      const mothers: string[] = [];
-      if (p.gender==='female' && p.id) mothers.push(p.id);
-      for (const w of getFemaleSpouses(p)) mothers.push(w.id!);
-      for (const mid of mothers){
-        const kids = members.filter(m=> m.mother===mid && !visited.has(m.id!));
-        if (kids.length){
-          sortByDobAsc(kids);
-          kids.forEach(k=> { visited.add(k.id!); nextOrdered.push(k); });
-        }
-      }
+function buildParentContext<T extends TreePersonLike>(currentLevel: T[], spousesByMember: Record<string, T[]>) {
+  const motherIds = new Set<string>();
+  const fatherIds = new Set<string>();
+
+  for (const person of currentLevel) {
+    if (!person.id) continue;
+
+    if (person.gender === 'female') motherIds.add(person.id);
+    if (person.gender === 'male') fatherIds.add(person.id);
+
+    for (const spouse of spousesByMember[person.id] || []) {
+      if (!spouse?.id) continue;
+      if (spouse.gender === 'female') motherIds.add(spouse.id);
+      if (spouse.gender === 'male') fatherIds.add(spouse.id);
     }
-    if (!nextOrdered.length) break;
-    levels.push(nextOrdered);
-    current = nextOrdered;
   }
+
+  return { motherIds, fatherIds };
+}
+
+// Builds generational levels from a root member using a mother-first rule:
+// if a child has a mother, that mother determines which generation bridge it belongs to.
+// father-only links are used as a fallback when mother is missing.
+export function buildLevels<T extends TreePersonLike>(members: T[], root: T, spousesByMember: Record<string, T[]>, femaleFirst = false): T[][] {
+  const levels: T[][] = [];
+  const visited = new Set<string>();
+  visited.add(root.id!);
+  let current: T[] = [root];
+
+  while (current.length) {
+    const { motherIds, fatherIds } = buildParentContext(current, spousesByMember);
+    const nextLevel = members.filter((member) => {
+      if (!member.id || visited.has(member.id)) return false;
+      if (member.mother) return motherIds.has(member.mother);
+      if (member.father) return fatherIds.has(member.father);
+      return false;
+    });
+
+    if (!nextLevel.length) break;
+
+    sortPeopleByDobAsc(nextLevel);
+    nextLevel.forEach((member) => visited.add(member.id!));
+    levels.push(nextLevel);
+    current = nextLevel;
+  }
+
   // Optional: reorder within each level female first for presentation (if flag true)
-  if (femaleFirst){
-    levels.forEach(level => level.sort((a,b)=>{
+  if (femaleFirst) {
+    levels.forEach(level => level.sort((a, b) => {
       if (a.gender === b.gender) return 0;
       return a.gender === 'female' ? -1 : 1;
     }));

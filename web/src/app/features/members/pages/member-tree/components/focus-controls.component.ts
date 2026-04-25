@@ -7,7 +7,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
   selector: 'app-focus-controls',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatSlideToggleModule],
-  styles: [`:host{display:flex;align-items:center;gap:8px;flex:0 0 auto;} button{white-space:nowrap;}`],
+  styles: [`:host{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap} button{white-space:nowrap;} @media (max-width:640px){:host{width:100%}}`],
   template: `
     <ng-container *ngIf="focusRootId">
       <span style="padding:4px 8px;border:1px solid #ccc;border-radius:14px;margin-right:8px;display:inline-flex;align-items:center;gap:8px;">

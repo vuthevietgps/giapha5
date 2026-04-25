@@ -5,10 +5,11 @@
 # Usage: ./deploy-dongtocvietnam.sh
 
 DOMAIN="dongtocvietnam.com"
-BACKEND_PORT="3000"
-FRONTEND_PORT="8091"
+BACKEND_PORT="${BACKEND_PORT:-3000}"
+FRONTEND_PORT="${FRONTEND_PORT:-8096}"
 CONTAINER_NAME="dongtocvietnam-com"
 MONGODB_URI=""  # Will be prompted
+MONGODB_AUTH_SOURCE="${MONGODB_AUTH_SOURCE:-}"
 
 echo "🚀 Deploying Gia Phả Version 7 to $DOMAIN..."
 echo "📍 Server: 192.168.100.237"
@@ -22,15 +23,26 @@ fi
 
 # Prompt for MongoDB URI
 echo "📝 MongoDB Configuration"
-echo "Enter MongoDB Atlas URI (or press Enter to use default):"
-read -p "MONGODB_URI: " user_mongodb_uri
+echo "Enter MongoDB Atlas URI (required):"
+read -r -p "MONGODB_URI: " user_mongodb_uri
 
 if [ -z "$user_mongodb_uri" ]; then
-    echo "⚠️  No MongoDB URI provided. You'll need to set it manually later."
-    MONGODB_URI="mongodb://localhost:27017/giapha"
-else
-    MONGODB_URI="$user_mongodb_uri"
+    echo "❌ MongoDB Atlas URI is required. Deployment aborted."
+    exit 1
 fi
+
+case "$user_mongodb_uri" in
+    mongodb://localhost*|mongodb://127.0.0.1*|mongodb://mongo*|mongodb://dongtocvietnam-mongo*)
+        echo "❌ Expected a MongoDB Atlas URI, but received a local MongoDB URI."
+        exit 1
+        ;;
+esac
+
+MONGODB_URI="$user_mongodb_uri"
+
+echo "Optional Atlas authSource (press Enter to skip, example: admin):"
+read -r -p "MONGODB_AUTH_SOURCE: " user_mongodb_auth_source
+MONGODB_AUTH_SOURCE="$user_mongodb_auth_source"
 
 # 1. Create directory structure
 echo ""
@@ -44,8 +56,11 @@ echo "📝 Creating .env file..."
 cat > .env <<EOF
 # MongoDB Atlas Connection String
 MONGODB_URI=$MONGODB_URI
+MONGODB_AUTH_SOURCE=$MONGODB_AUTH_SOURCE
 NODE_ENV=production
 PORT=3000
+BACKEND_PORT=$BACKEND_PORT
+FRONTEND_PORT=$FRONTEND_PORT
 EOF
 
 # 3. Create docker-compose.yml
@@ -59,10 +74,11 @@ services:
     container_name: dongtocvietnam-backend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT}:3000"
     environment:
       - PORT=3000
       - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_AUTH_SOURCE=${MONGODB_AUTH_SOURCE}
       - NODE_ENV=production
     volumes:
       - uploads-data:/app/uploads
@@ -89,7 +105,7 @@ services:
     container_name: dongtocvietnam-frontend
     restart: unless-stopped
     ports:
-      - "8090:80"
+      - "${FRONTEND_PORT}:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -152,13 +168,13 @@ if [ -f /etc/cloudflared/config.yml ]; then
         # Add new ingress rules before the catch-all rule
         sed -i "/- service: http_status:404/i\\
   - hostname: dongtocvietnam.com\\
-    service: http://127.0.0.1:8091\\
+    service: http://127.0.0.1:${FRONTEND_PORT}\\
     originRequest:\\
       noTLSVerify: true\\
       connectTimeout: 30s\\
       tlsTimeout: 30s\\
   - hostname: www.dongtocvietnam.com\\
-    service: http://127.0.0.1:8091\\
+    service: http://127.0.0.1:${FRONTEND_PORT}\\
     originRequest:\\
       noTLSVerify: true\\
       connectTimeout: 30s\\
@@ -183,10 +199,10 @@ fi
 echo ""
 echo "🧪 Testing endpoints..."
 echo "Backend API:"
-curl -I http://localhost:3000/api 2>/dev/null | head -n 1 || echo "❌ Backend not responding"
+curl -I http://localhost:${BACKEND_PORT}/api 2>/dev/null | head -n 1 || echo "❌ Backend not responding"
 echo ""
 echo "Frontend:"
-curl -I http://localhost:8090 2>/dev/null | head -n 1 || echo "❌ Frontend not responding"
+curl -I http://localhost:${FRONTEND_PORT} 2>/dev/null | head -n 1 || echo "❌ Frontend not responding"
 
 # 11. Show logs
 echo ""
@@ -200,13 +216,13 @@ echo "  ✅ DEPLOYMENT COMPLETED!"
 echo "================================================================"
 echo ""
 echo "📦 Containers:"
-echo "   • dongtocvietnam-backend  (port 3000)"
-echo "   • dongtocvietnam-frontend (port 8090)"
+echo "   • dongtocvietnam-backend  (port ${BACKEND_PORT})"
+echo "   • dongtocvietnam-frontend (port ${FRONTEND_PORT})"
 echo ""
 echo "🌐 Domain: https://dongtocvietnam.com"
 echo "🔌 Local access:"
-echo "   • Frontend: http://192.168.100.237:8090"
-echo "   • Backend:  http://192.168.100.237:3000/api"
+echo "   • Frontend: http://192.168.100.237:${FRONTEND_PORT}"
+echo "   • Backend:  http://192.168.100.237:${BACKEND_PORT}/api"
 echo ""
 echo "📁 Location: /opt/websites/sites/$CONTAINER_NAME"
 echo ""

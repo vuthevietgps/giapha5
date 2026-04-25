@@ -21,6 +21,13 @@ export class Family {
   // Không bắt buộc để tạo họ, nhưng nếu set phải thuộc về họ và gender = male.
   @Prop({ type: () => String, ref: 'Member', required: false })
   rootMember?: string;
+
+  // Public sharing: token for read-only public tree view
+  @Prop({ type: String, sparse: true, unique: true })
+  shareToken?: string;
+
+  @Prop({ default: false })
+  isPublic: boolean;
 }
 
 export const FamilySchema = SchemaFactory.createForClass(Family);

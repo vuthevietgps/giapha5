@@ -87,11 +87,6 @@ export class TreeLayoutService {
       layout.parentChildren,
       wifeCenterMetrics || new Map()
     );
-
-    console.log('TreeLayoutService - levels:', levels.length);
-    console.log('TreeLayoutService - connections:', connections.length);
-    console.log('TreeLayoutService - nodes:', nodes.length);
-
     return {
       pos: layout.pos,
       totalWidth: layout.totalWidth,

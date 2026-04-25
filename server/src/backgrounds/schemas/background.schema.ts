@@ -5,11 +5,14 @@ export type BackgroundDocument = HydratedDocument<Background>;
 
 @Schema({ timestamps: true })
 export class Background {
-  @Prop({ required: true })
-  name: string; // e.g., "Ảnh nền 1"
+  @Prop({ required: true, trim: true })
+  name: string;
+
+  @Prop({ type: () => String, ref: 'Family', required: true, index: true })
+  family: string;
 
   @Prop({ required: true })
-  fileName: string; // stored on disk
+  fileName: string;
 
   @Prop()
   originalName?: string;
@@ -29,7 +32,7 @@ BackgroundSchema.set('toJSON', {
   transform: (_doc: any, ret: any) => {
     ret.id = ret._id;
     delete ret._id;
-    delete ret.fileName; // hide raw filename from list
+    delete ret.fileName;
     return ret;
   },
 });

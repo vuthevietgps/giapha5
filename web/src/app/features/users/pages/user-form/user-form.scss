@@ -1,0 +1,95 @@
+.form-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
+  .back-btn {
+    margin-right: 8px;
+  }
+}
+
+.form-container {
+  padding: 24px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.form-card {
+  border-radius: 12px;
+}
+
+.user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 8px;
+  color: #B8860B;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #D4AF37;
+  }
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+
+  .save-btn {
+    min-width: 140px;
+    height: 44px;
+    font-weight: 600;
+    border-radius: 8px;
+
+    mat-icon {
+      margin-right: 6px;
+    }
+  }
+
+  .cancel-btn {
+    height: 44px;
+    border-radius: 8px;
+
+    mat-icon {
+      margin-right: 6px;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .form-container {
+    padding: 16px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+
+    .save-btn, .cancel-btn {
+      width: 100%;
+    }
+  }
+}

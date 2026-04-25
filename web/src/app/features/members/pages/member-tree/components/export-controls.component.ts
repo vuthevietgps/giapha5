@@ -8,7 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
   selector: 'app-export-controls',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule],
-  styles: [`:host{display:flex;align-items:center;gap:8px;flex:0 0 auto;} button{white-space:nowrap;}`],
+  styles: [`:host{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap} button{white-space:nowrap;} @media (max-width:640px){:host{width:100%} button{flex:1 1 100%;justify-content:center}}`],
   template: `
     <button mat-stroked-button (click)="export.emit(4)">
       <mat-icon>download</mat-icon>

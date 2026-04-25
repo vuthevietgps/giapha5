@@ -19,6 +19,74 @@ export interface DecorInstance {
 
 export type DecorAssets = Record<DecorSlot, DecorAsset[]>;
 
+// Lightweight metadata stored in localStorage (no dataUrl)
+interface DecorAssetMeta {
+  id: string;
+  name: string;
+  slot: DecorSlot;
+}
+
+// ─── IndexedDB helper ──────────────────────────────────────
+const DB_NAME = 'tree-decor-db';
+const DB_VERSION = 1;
+const STORE_NAME = 'assets';
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGet(key: string): Promise<string | undefined> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result as string | undefined);
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+async function idbPut(key: string, value: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.put(value, key);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbDelete(key: string): Promise<void> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    // ignore
+  }
+}
+// ────────────────────────────────────────────────────────────
+
 @Injectable({ providedIn: 'root' })
 export class TreeDecorationService {
   // Built-in default assets (inline SVG) to ensure library is available across screens
@@ -54,6 +122,12 @@ export class TreeDecorationService {
       }
     ]
   };
+
+  private readonly defaultIds = new Set([
+    'scroll-default-1', 'scroll-default-2',
+    'dragon-left-default', 'dragon-right-default',
+  ]);
+
   // Reactive state
   decorAssets = signal<DecorAssets>({
     scroll: [],
@@ -85,70 +159,229 @@ export class TreeDecorationService {
   }
 
   /**
-   * Load decoration assets and instances from localStorage for a family
+   * Load decoration assets and instances for a family.
+   * Metadata from localStorage, image dataUrls from IndexedDB.
    */
   loadDecor(familyId: string | null): void {
-    console.log('🎨 loadDecor called with familyId:', familyId);
     if (!familyId) {
       this.decorAssets.set({
-        scroll: this.defaultAssets.scroll,
-        dragonLeft: this.defaultAssets.dragonLeft,
-        dragonRight: this.defaultAssets.dragonRight
+        scroll: [...this.defaultAssets.scroll],
+        dragonLeft: [...this.defaultAssets.dragonLeft],
+        dragonRight: [...this.defaultAssets.dragonRight]
       });
       this.decorInstances.set([]);
-      console.log('🎨 Cleared decor (no family)');
       return;
     }
 
-    const slots: DecorSlot[] = ['scroll', 'dragonLeft', 'dragonRight'];
-    const assets: DecorAssets = { scroll: [], dragonLeft: [], dragonRight: [] };
-
-    slots.forEach(slot => {
-      const key = this.decorKey(familyId, slot);
-      const raw = localStorage.getItem(key);
-      const userAssets = raw ? (JSON.parse(raw) as DecorAsset[]) : [];
-      console.log(`🎨 Loaded ${userAssets.length} assets for ${slot} from ${key}`);
-      assets[slot] = this.mergeWithDefaults(slot, userAssets);
-    });
-
-    this.decorAssets.set(assets);
-
-    // Load instances
+    // 1) Load instances (small data, localStorage is fine)
     const instancesKey = `tree:${familyId}:decor:instances`;
     const instancesRaw = localStorage.getItem(instancesKey);
     const instances = instancesRaw ? (JSON.parse(instancesRaw) as DecorInstance[]) : [];
-    console.log(`🎨 Loaded ${instances.length} decor instances from ${instancesKey}`);
     this.decorInstances.set(instances);
 
+    // 2) Load asset metadata from localStorage (no dataUrl)
+    const metaKey = `tree:${familyId}:decor:meta`;
+    const metaRaw = localStorage.getItem(metaKey);
+    const metas: DecorAssetMeta[] = metaRaw ? JSON.parse(metaRaw) : [];
+
+    // Start with defaults immediately
+    const assets: DecorAssets = {
+      scroll: [...this.defaultAssets.scroll],
+      dragonLeft: [...this.defaultAssets.dragonLeft],
+      dragonRight: [...this.defaultAssets.dragonRight],
+    };
+    this.decorAssets.set(assets);
+
+    // 3) Load user asset dataUrls from IndexedDB (async)
+    if (metas.length > 0) {
+      this.loadUserAssetsFromIDB(familyId, metas);
+    }
+
+    // 4) Migrate: if old localStorage keys exist (with full dataUrl), move to IndexedDB
+    this.migrateFromLocalStorage(familyId);
   }
 
   /**
-   * Persist decoration assets and instances to localStorage
+   * Async: load user-uploaded asset dataUrls from IndexedDB and merge into signals
+   */
+  private async loadUserAssetsFromIDB(familyId: string, metas: DecorAssetMeta[]): Promise<void> {
+    const userAssets: DecorAsset[] = [];
+
+    for (const meta of metas) {
+      const idbKey = `decor:${familyId}:${meta.id}`;
+      const dataUrl = await idbGet(idbKey);
+      if (dataUrl) {
+        userAssets.push({ id: meta.id, name: meta.name, dataUrl });
+      }
+    }
+
+    if (userAssets.length === 0) return;
+
+    // Group by slot
+    const bySlot: Record<DecorSlot, DecorAsset[]> = { scroll: [], dragonLeft: [], dragonRight: [] };
+    for (const meta of metas) {
+      const asset = userAssets.find(a => a.id === meta.id);
+      if (asset) bySlot[meta.slot].push(asset);
+    }
+
+    // Merge with current (defaults already loaded)
+    const current = this.decorAssets();
+    const updated: DecorAssets = {
+      scroll: this.mergeWithDefaults('scroll', bySlot.scroll),
+      dragonLeft: this.mergeWithDefaults('dragonLeft', bySlot.dragonLeft),
+      dragonRight: this.mergeWithDefaults('dragonRight', bySlot.dragonRight),
+    };
+    this.decorAssets.set(updated);
+  }
+
+  /**
+   * One-time migration: move old localStorage data (with dataUrl) to IndexedDB
+   */
+  private async migrateFromLocalStorage(familyId: string): Promise<void> {
+    const slots: DecorSlot[] = ['scroll', 'dragonLeft', 'dragonRight'];
+    const allMetas: DecorAssetMeta[] = [];
+    const userAssetsToMerge: Record<DecorSlot, DecorAsset[]> = { scroll: [], dragonLeft: [], dragonRight: [] };
+    let migrated = false;
+
+    for (const slot of slots) {
+      const oldKey = this.oldDecorKey(familyId, slot);
+      const raw = localStorage.getItem(oldKey);
+      if (!raw) continue;
+
+      try {
+        const oldAssets = JSON.parse(raw) as DecorAsset[];
+        for (const asset of oldAssets) {
+          // Skip defaults (already available in code)
+          if (this.defaultIds.has(asset.id)) continue;
+          if (!asset.dataUrl) continue;
+
+          // Store dataUrl in IndexedDB
+          const idbKey = `decor:${familyId}:${asset.id}`;
+          await idbPut(idbKey, asset.dataUrl);
+
+          allMetas.push({ id: asset.id, name: asset.name, slot });
+          userAssetsToMerge[slot].push(asset);
+          migrated = true;
+        }
+
+        // Remove old localStorage key
+        localStorage.removeItem(oldKey);
+      } catch {
+        // corrupted data, just remove
+        localStorage.removeItem(oldKey);
+      }
+    }
+
+    if (migrated) {
+      // Save lightweight meta to localStorage
+      const metaKey = `tree:${familyId}:decor:meta`;
+      const existingRaw = localStorage.getItem(metaKey);
+      const existing: DecorAssetMeta[] = existingRaw ? JSON.parse(existingRaw) : [];
+      const merged = [...existing];
+      for (const m of allMetas) {
+        if (!merged.some(e => e.id === m.id)) merged.push(m);
+      }
+      localStorage.setItem(metaKey, JSON.stringify(merged));
+
+      // Update signal with migrated assets
+      const current = this.decorAssets();
+      this.decorAssets.set({
+        scroll: this.mergeWithDefaults('scroll', userAssetsToMerge.scroll),
+        dragonLeft: this.mergeWithDefaults('dragonLeft', userAssetsToMerge.dragonLeft),
+        dragonRight: this.mergeWithDefaults('dragonRight', userAssetsToMerge.dragonRight),
+      });
+    }
+  }
+
+  /**
+   * Sync assets from dialog result: detect new/removed assets and update IndexedDB accordingly.
+   * Called when the decor dialog closes with changes.
+   */
+  async syncFromDialog(familyId: string | null, newAssets: DecorAssets): Promise<void> {
+    if (!familyId) return;
+
+    const oldAssets = this.decorAssets();
+    const allOldIds = new Set([
+      ...oldAssets.scroll.map(a => a.id),
+      ...oldAssets.dragonLeft.map(a => a.id),
+      ...oldAssets.dragonRight.map(a => a.id),
+    ]);
+    const allNewIds = new Set([
+      ...newAssets.scroll.map(a => a.id),
+      ...newAssets.dragonLeft.map(a => a.id),
+      ...newAssets.dragonRight.map(a => a.id),
+    ]);
+
+    // Find newly added assets (in new but not in old) — store dataUrl in IndexedDB
+    const slots: DecorSlot[] = ['scroll', 'dragonLeft', 'dragonRight'];
+    const newMetas: DecorAssetMeta[] = [];
+    for (const slot of slots) {
+      for (const asset of newAssets[slot]) {
+        if (!allOldIds.has(asset.id) && !this.defaultIds.has(asset.id)) {
+          const idbKey = `decor:${familyId}:${asset.id}`;
+          await idbPut(idbKey, asset.dataUrl);
+          newMetas.push({ id: asset.id, name: asset.name, slot });
+        }
+      }
+    }
+
+    // Find removed assets (in old but not in new) — remove from IndexedDB
+    for (const slot of slots) {
+      for (const asset of oldAssets[slot]) {
+        if (!allNewIds.has(asset.id) && !this.defaultIds.has(asset.id)) {
+          const idbKey = `decor:${familyId}:${asset.id}`;
+          await idbDelete(idbKey);
+        }
+      }
+    }
+
+    // Rebuild metadata list
+    const metaKey = `tree:${familyId}:decor:meta`;
+    const allMetas: DecorAssetMeta[] = [];
+    for (const slot of slots) {
+      for (const asset of newAssets[slot]) {
+        if (!this.defaultIds.has(asset.id)) {
+          allMetas.push({ id: asset.id, name: asset.name, slot });
+        }
+      }
+    }
+    try {
+      localStorage.setItem(metaKey, JSON.stringify(allMetas));
+    } catch {
+      // metadata is small, this shouldn't fail
+    }
+
+    // Update signal
+    this.decorAssets.set(newAssets);
+  }
+
+  /**
+   * Persist decoration metadata to localStorage and instances.
+   * Image dataUrls are stored in IndexedDB (not here — stored during addDecor).
    */
   persistDecor(familyId: string | null, slot?: DecorSlot): void {
     if (!familyId) return;
 
-    // Persist assets
-    const slots: DecorSlot[] = slot ? [slot] : ['scroll', 'dragonLeft', 'dragonRight'];
-    const currentAssets = this.decorAssets();
+    try {
+      // Persist instances (small data, always safe)
+      const instancesKey = `tree:${familyId}:decor:instances`;
+      localStorage.setItem(instancesKey, JSON.stringify(this.decorInstances()));
+    } catch (err) {
+      console.warn('Failed to persist decor instances:', err);
+    }
 
-    slots.forEach(s => {
-      const key = this.decorKey(familyId, s);
-      localStorage.setItem(key, JSON.stringify(currentAssets[s]));
-    });
-
-    // Persist instances
-    const instancesKey = `tree:${familyId}:decor:instances`;
-    localStorage.setItem(instancesKey, JSON.stringify(this.decorInstances()));
+    // Note: asset metadata is persisted separately in addDecor/removeAsset.
+    // No need to re-persist all asset dataUrls here.
   }
 
   /**
-   * Add a new decoration asset from file
+   * Add a new decoration asset from file.
+   * Stores image data in IndexedDB (large), metadata in localStorage (small).
    */
   async addDecor(familyId: string | null, slot: DecorSlot, file: File): Promise<void> {
     if (!familyId) return;
 
-    // Compress image before storing to avoid localStorage quota exceeded
+    // Compress image before storing
     const compressedDataUrl = await this.compressImage(file);
     const asset: DecorAsset = {
       id: `${slot}-${Date.now()}`,
@@ -156,22 +389,54 @@ export class TreeDecorationService {
       dataUrl: compressedDataUrl
     };
 
-    const current = this.decorAssets();
-    const mergedSlotAssets = this.mergeWithDefaults(slot, [asset, ...current[slot]]);
-    const updated = {
-      ...current,
-      [slot]: mergedSlotAssets.slice(0, 12) // allow a few more while keeping quota manageable
-    };
+    // 1) Store dataUrl in IndexedDB (large capacity)
+    const idbKey = `decor:${familyId}:${asset.id}`;
+    await idbPut(idbKey, compressedDataUrl);
 
-    this.decorAssets.set(updated);
-    
-    try {
-      this.persistDecor(familyId, slot);
-    } catch (err: any) {
-      // If storage quota exceeded, remove the asset and throw error
-      this.decorAssets.set(current);
-      throw new Error('Không đủ bộ nhớ. Hãy xóa bớt ảnh cũ hoặc giảm kích thước ảnh.');
+    // 2) Store lightweight metadata in localStorage
+    const metaKey = `tree:${familyId}:decor:meta`;
+    const metaRaw = localStorage.getItem(metaKey);
+    const metas: DecorAssetMeta[] = metaRaw ? JSON.parse(metaRaw) : [];
+    metas.push({ id: asset.id, name: asset.name, slot });
+    localStorage.setItem(metaKey, JSON.stringify(metas));
+
+    // 3) Update signal
+    const current = this.decorAssets();
+    const slotAssets = [...current[slot], asset];
+    this.decorAssets.set({ ...current, [slot]: slotAssets });
+  }
+
+  /**
+   * Remove a decoration asset (user-uploaded)
+   */
+  async removeAsset(familyId: string | null, assetId: string): Promise<void> {
+    if (!familyId || this.defaultIds.has(assetId)) return;
+
+    // Remove from IndexedDB
+    const idbKey = `decor:${familyId}:${assetId}`;
+    await idbDelete(idbKey);
+
+    // Remove from metadata
+    const metaKey = `tree:${familyId}:decor:meta`;
+    const metaRaw = localStorage.getItem(metaKey);
+    if (metaRaw) {
+      const metas: DecorAssetMeta[] = JSON.parse(metaRaw);
+      localStorage.setItem(metaKey, JSON.stringify(metas.filter(m => m.id !== assetId)));
     }
+
+    // Remove from signal
+    const current = this.decorAssets();
+    const updated: DecorAssets = {
+      scroll: current.scroll.filter(a => a.id !== assetId),
+      dragonLeft: current.dragonLeft.filter(a => a.id !== assetId),
+      dragonRight: current.dragonRight.filter(a => a.id !== assetId),
+    };
+    this.decorAssets.set(updated);
+
+    // Remove any instances using this asset
+    const instances = this.decorInstances().filter(i => i.assetId !== assetId);
+    this.decorInstances.set(instances);
+    this.persistDecor(familyId);
   }
 
   /**
@@ -196,7 +461,7 @@ export class TreeDecorationService {
    */
   updateInstancePosition(id: string, x: number, y: number): void {
     const current = this.decorInstances();
-    const updated = current.map(inst => 
+    const updated = current.map(inst =>
       inst.id === id ? { ...inst, x, y } : inst
     );
     this.decorInstances.set(updated);
@@ -246,14 +511,13 @@ export class TreeDecorationService {
 
   // Private helper methods
 
-  private decorKey(familyId: string, slot: DecorSlot): string {
+  private oldDecorKey(familyId: string, slot: DecorSlot): string {
     return `tree:${familyId}:decor:${slot}`;
   }
 
   /**
-   * Compress image to reduce storage size
-   * Target: reduce to ~200KB max per image
-   * Preserves PNG transparency by detecting file type
+   * Compress image to reduce storage size.
+   * Preserves PNG transparency by detecting file type.
    */
   private compressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -263,7 +527,6 @@ export class TreeDecorationService {
       const isPNG = file.type === 'image/png';
 
       img.onload = () => {
-        // Calculate new dimensions (max 1200px on longest side)
         let width = img.width;
         let height = img.height;
         const maxSize = 1200;
@@ -281,31 +544,18 @@ export class TreeDecorationService {
         canvas.width = width;
         canvas.height = height;
 
-        // For PNG with transparency, fill transparent background
         if (isPNG && ctx) {
           ctx.clearRect(0, 0, width, height);
         }
 
-        // Draw image
         ctx?.drawImage(img, 0, 0, width, height);
-        
-        // For PNG files, keep PNG format to preserve transparency
+
         if (isPNG) {
-          let quality = 0.9;
-          let dataUrl = canvas.toDataURL('image/png', quality);
-          
-          // If too large, try reducing quality
-          while (dataUrl.length > 300000 && quality > 0.6) {
-            quality -= 0.1;
-            dataUrl = canvas.toDataURL('image/png', quality);
-          }
+          const dataUrl = canvas.toDataURL('image/png');
           resolve(dataUrl);
         } else {
-          // For JPEG and other formats, use JPEG compression
           let quality = 0.7;
           let dataUrl = canvas.toDataURL('image/jpeg', quality);
-          
-          // If still too large, reduce quality further
           while (dataUrl.length > 250000 && quality > 0.3) {
             quality -= 0.1;
             dataUrl = canvas.toDataURL('image/jpeg', quality);
@@ -315,22 +565,12 @@ export class TreeDecorationService {
       };
 
       img.onerror = () => reject(new Error('Không thể đọc ảnh'));
-      
-      // Read file and set as image source
+
       const reader = new FileReader();
       reader.onload = (e) => {
         img.src = e.target?.result as string;
       };
       reader.onerror = () => reject(new Error('Không thể đọc file'));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  private readFileAsDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
       reader.readAsDataURL(file);
     });
   }

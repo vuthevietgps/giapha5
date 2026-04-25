@@ -1,9 +1,12 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmDialogComponent } from '../../../../core/ui/confirm-dialog';
 
 export type DecorSlot = 'scroll' | 'dragonLeft' | 'dragonRight';
 export interface DecorAsset { id: string; name: string; dataUrl: string }
@@ -18,7 +21,14 @@ export interface DecorDialogResult {
 @Component({
   selector: 'app-tree-decor-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatSnackBarModule,
+  ],
   template: `
     <h2 mat-dialog-title>Quản lý thư viện trang trí</h2>
     <div mat-dialog-content>
@@ -48,7 +58,7 @@ export interface DecorDialogResult {
           <div class="overlay-hint">Nhấp để thêm vào canvas</div>
         </div>
       </div>
-      <p class="hint"><mat-icon>info</mat-icon> Click <mat-icon inline>add_circle</mat-icon> để thêm trang trí vào canvas. Có thể thêm nhiều lần.</p>
+      <p class="hint"><mat-icon>info</mat-icon> Chọn một ảnh để thêm trang trí vào canvas. Có thể thêm nhiều lần.</p>
     </div>
     <div mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Đóng</button>
@@ -67,10 +77,12 @@ export interface DecorDialogResult {
     .empty{opacity:.7}
     .hint{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;opacity:0.8}
     .hint mat-icon{font-size:18px;width:18px;height:18px}
-    .hint mat-icon[inline]{font-size:16px;width:16px;height:16px;vertical-align:middle}
   `]
 })
 export class TreeDecorDialog {
+  private readonly dialog = inject(MatDialog);
+  private readonly snack = inject(MatSnackBar);
+
   readonly slots: DecorSlot[] = ['scroll', 'dragonLeft', 'dragonRight'];
   activeSlot: DecorSlot = 'scroll';
   assets: Record<DecorSlot, DecorAsset[]> = { scroll: [], dragonLeft: [], dragonRight: [] };
@@ -97,26 +109,34 @@ export class TreeDecorDialog {
     input.value = '';
     if (!f) return;
     try {
-      // Compress image before storing
       const dataUrl = await this.compressImage(f);
       const asset: DecorAsset = { id: `${this.activeSlot}-${Date.now()}`, name: f.name, dataUrl };
       this.assets[this.activeSlot] = [asset, ...this.items].slice(0, 8);
       this.hasChanges = true;
     } catch (err) {
       console.error(err);
-      alert('Không thể đọc ảnh. Vui lòng thử lại.');
+      this.snack.open('Không thể đọc ảnh. Vui lòng thử lại.', 'Đóng', { duration: 2200 });
     }
   }
 
   addToCanvas(asset: DecorAsset){
-    this.hasChanges = true; // ensure assets persist even when only adding to canvas
-    // Close dialog and signal to add instance
+    this.hasChanges = true;
     this.ref.close({ assets: this.assets, addInstance: { assetId: asset.id, slot: this.activeSlot } });
   }
 
-  remove(it: DecorAsset){
-    const confirmed = confirm(`Xóa '${it.name}'?`);
+  async remove(it: DecorAsset){
+    const confirmed = await firstValueFrom(
+      this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Xóa trang trí',
+          message: `Bạn có chắc muốn xóa "${it.name}" khỏi thư viện?`,
+          confirmText: 'Xóa ảnh',
+          tone: 'warn',
+        },
+      }).afterClosed(),
+    );
     if (!confirmed) return;
+
     this.assets[this.activeSlot] = this.items.filter(x => x.id !== it.id);
     this.hasChanges = true;
   }
@@ -158,14 +178,12 @@ export class TreeDecorDialog {
         canvas.width = width;
         canvas.height = height;
 
-        // For PNG with transparency, clear background first
         if (isPNG && ctx) {
           ctx.clearRect(0, 0, width, height);
         }
 
         ctx?.drawImage(img, 0, 0, width, height);
 
-        // Keep PNG format for transparency
         if (isPNG) {
           let quality = 0.9;
           let dataUrl = canvas.toDataURL('image/png', quality);
@@ -176,7 +194,6 @@ export class TreeDecorDialog {
           }
           resolve(dataUrl);
         } else {
-          // Use JPEG for other formats
           let quality = 0.7;
           let dataUrl = canvas.toDataURL('image/jpeg', quality);
 
@@ -188,22 +205,13 @@ export class TreeDecorDialog {
         }
       };
 
-      img.onerror = () => reject(new Error('Không thể đọc ảnh'));
+      img.onerror = () => reject(new Error('Khong the doc anh'));
 
       const reader = new FileReader();
       reader.onload = (e) => {
         img.src = e.target?.result as string;
       };
-      reader.onerror = () => reject(new Error('Không thể đọc file'));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  private readFileAsDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
+      reader.onerror = () => reject(new Error('Khong the doc file'));
       reader.readAsDataURL(file);
     });
   }

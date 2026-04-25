@@ -1,10 +1,28 @@
-import { Controller, Get, Param, Post, UploadedFile, UseInterceptors, Res, Body, Delete } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Res,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { BackgroundsService, UPLOAD_DIR } from './backgrounds.service';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Action, CurrentUser, Resource } from '../auth/decorators/roles.decorator';
+import type { AuthUser } from '../auth/permissions.service';
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 function uniqueName(original: string) {
   const ext = path.extname(original) || '.bin';
@@ -13,12 +31,15 @@ function uniqueName(original: string) {
 }
 
 @Controller('backgrounds')
+@UseGuards(PermissionsGuard)
 export class BackgroundsController {
   constructor(private readonly service: BackgroundsService) {
     this.service.ensureUploadDir();
   }
 
   @Post()
+  @Resource('backgrounds')
+  @Action('create')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -28,21 +49,37 @@ export class BackgroundsController {
         },
         filename: (_req, file, cb) => cb(null, uniqueName(file.originalname)),
       }),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req, file, cb) => {
+        if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Chi chap nhan file anh (JPEG, PNG, GIF, WebP, SVG)'), false);
+        }
+      },
     }),
   )
-  async upload(@UploadedFile() file: any, @Body('name') name?: string) {
-    const created = await this.service.createFromFile(file, name);
-    return created;
+  async upload(
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file: any,
+    @Body('family') familyId?: string,
+    @Body('name') name?: string,
+  ) {
+    return this.service.createFromFile(user, file, familyId, name);
   }
 
   @Get()
-  list() {
-    return this.service.list();
+  @Resource('backgrounds')
+  @Action('read')
+  list(@CurrentUser() user: AuthUser, @Query('family') familyId?: string) {
+    return this.service.list(user, familyId);
   }
 
   @Get(':id/file')
-  async file(@Param('id') id: string, @Res() res: any) {
-    const doc = await this.service.findOne(id);
+  @Resource('backgrounds')
+  @Action('read')
+  async file(@CurrentUser() user: AuthUser, @Param('id') id: string, @Res() res: any) {
+    const doc = await this.service.findOne(user, id);
     const fp = this.service.getFilePath(doc.fileName);
     if (!fs.existsSync(fp)) {
       return res.status(404).send('File not found');
@@ -52,7 +89,9 @@ export class BackgroundsController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string){
-    return this.service.remove(id);
+  @Resource('backgrounds')
+  @Action('delete')
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.remove(user, id);
   }
 }

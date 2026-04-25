@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -43,6 +44,7 @@ export class MemberForm implements OnInit {
   private readonly snack = inject(MatSnackBar);
   private readonly familyService = inject(FamilyService);
   private readonly positionService = inject(PositionService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly memberService = inject(MemberService);
   private readonly unionService = inject(UnionService);
 
@@ -100,6 +102,7 @@ export class MemberForm implements OnInit {
           dob: m.dob?.substring(0,10),
           dod: m.dod?.substring(0,10),
           position: m.position,
+          gender: m.gender || 'male',
           isMartyred: m.isMartyred || false,
         });
         this.originalFamilyId = m.family || null;
@@ -110,7 +113,7 @@ export class MemberForm implements OnInit {
       });
     }
 
-    this.form.controls.family.valueChanges.subscribe((fid) => {
+    this.form.controls.family.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((fid) => {
       if (fid) this.loadFamilyMembers(fid);
       // Reset selects when family changes
       this.form.patchValue({ father: '', mother: '', spouse: '' });
@@ -127,7 +130,7 @@ export class MemberForm implements OnInit {
       }
     });
 
-    this.form.controls.gender.valueChanges.subscribe(() => {
+    this.form.controls.gender.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.computeOptions();
     });
   }
